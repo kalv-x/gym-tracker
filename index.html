@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gym Tracker</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#fef7ff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141218" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,100..125,400..700&display=swap">
+<style>
+  /* Material 3 Expressive — colour tokens (baseline scheme), light then dark */
+  :root {
+    --primary: #6750a4; --on-primary: #ffffff; --primary-container: #eaddff; --on-primary-container: #4f378b;
+    --secondary-container: #e8def8; --on-secondary-container: #4a4458;
+    --tertiary: #7d5260; --tertiary-container: #ffd8e4; --on-tertiary-container: #633b48;
+    --surface: #fef7ff; --surface-lowest: #ffffff; --surface-low: #f7f2fa; --surface-c: #f3edf7; --surface-high: #ece6f0; --surface-highest: #e6e0e9;
+    --on-surface: #1d1b20; --on-surface-variant: #49454f; --outline: #79747e; --outline-variant: #cac4d0;
+    --success: #1f7a43; --on-success: #ffffff; --success-container: #c4eed0; --on-success-container: #0b3d1c;
+    --error: #b3261e; --scrim: rgba(0,0,0,.32);
+    --spring: linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%, 0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001);
+    --spring-bouncy: linear(0, 0.009, 0.035 2.1%, 0.141, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%, 0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1);
+    /* aliases used by inline styles in the app's templates */
+    --bg: var(--surface); --card: var(--surface-lowest); --ink: var(--on-surface); --muted: var(--on-surface-variant); --line: var(--outline-variant);
+    --field: var(--surface-high); --accent: var(--primary); --accent-ink: var(--on-primary); --ok: var(--success); --ok-soft: var(--success-container);
+    --miss: var(--outline); --miss-soft: var(--surface-high); --shadow: none;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #d0bcff; --on-primary: #381e72; --primary-container: #4f378b; --on-primary-container: #eaddff;
+      --secondary-container: #4a4458; --on-secondary-container: #e8def8;
+      --tertiary: #efb8c8; --tertiary-container: #633b48; --on-tertiary-container: #ffd8e4;
+      --surface: #141218; --surface-lowest: #0f0d13; --surface-low: #1d1b20; --surface-c: #211f26; --surface-high: #2b2930; --surface-highest: #36343b;
+      --on-surface: #e6e0e9; --on-surface-variant: #cac4d0; --outline: #938f99; --outline-variant: #49454f;
+      --success: #7ad99a; --on-success: #003919; --success-container: #1f4d2e; --on-success-container: #b6f2c6;
+      --error: #f2b8b5; --scrim: rgba(0,0,0,.5);
+      --card: var(--surface-c);
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--surface); color: var(--on-surface); }
+  body {
+    font: 400 16px/1.4 "Roboto Flex", Roboto, system-ui, sans-serif; font-optical-sizing: auto;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  input { font: inherit; color: inherit; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px calc(env(safe-area-inset-bottom) + 104px); }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  main.enter > * { animation: rise .45s var(--spring) both; }
+  main.enter > *:nth-child(2) { animation-delay: .03s; } main.enter > *:nth-child(3) { animation-delay: .06s; } main.enter > *:nth-child(4) { animation-delay: .09s; } main.enter > *:nth-child(n+5) { animation-delay: .12s; }
+
+  /* Top app bar */
+  header.top { position: sticky; top: 0; z-index: 5; background: var(--surface); padding: 14px 0 12px; }
+  .back { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px 0 12px; margin-bottom: 8px; border-radius: 20px; background: var(--secondary-container); color: var(--on-secondary-container); font-weight: 500; font-size: 14px; transition: border-radius .3s var(--spring); }
+  .back:active { border-radius: 12px; }
+  .h1 { font-weight: 500; font-size: 30px; letter-spacing: -.01em; line-height: 1.12; font-variation-settings: "wdth" 110; }
+  .h-sub { color: var(--on-surface-variant); font-size: 14px; margin-top: 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .tag { font-size: 12px; font-weight: 500; background: var(--tertiary-container); color: var(--on-tertiary-container); border-radius: 8px; padding: 3px 10px; }
+  .saved { font-size: 12px; color: var(--on-surface-variant); margin-left: auto; }
+  .saved.warn { color: var(--error); }
+
+  .hint { color: var(--on-surface-variant); font-size: 14px; margin: 14px 4px 4px; }
+  .banner { background: var(--surface-c); border-radius: 20px; padding: 6px 6px 6px 16px; margin-top: 12px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .banner button { height: 40px; padding: 0 16px; border-radius: 20px; background: var(--primary); color: var(--on-primary); font-weight: 500; white-space: nowrap; transition: border-radius .3s var(--spring); }
+  .banner button:active { border-radius: 12px; }
+
+  /* Week: session cards */
+  .scard { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; background: var(--surface-c); border-radius: 28px; padding: 18px 18px; margin: 10px 0; transition: border-radius .35s var(--spring), transform .35s var(--spring); }
+  .scard:active { border-radius: 18px; transform: scale(.98); }
+  .sdot { width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto; background: var(--surface-highest); display: grid; place-items: center; }
+  .scard.done { background: var(--success-container); color: var(--on-success-container); }
+  .scard.done .sdot { background: var(--success); border-radius: 14px; }
+  .scard.done .sdot::after { content: ""; width: 18px; height: 10px; border: solid var(--on-success); border-width: 0 0 3px 3px; transform: translateY(-2px) rotate(-45deg); }
+  .scard.missed { opacity: .6; }
+  .scard.missed .sdot::after { content: ""; width: 16px; height: 3px; border-radius: 2px; background: var(--on-surface-variant); }
+  .sinfo { flex: 1; min-width: 0; }
+  .sname { font-weight: 500; font-size: 18px; }
+  .sstat { color: var(--on-surface-variant); font-size: 14px; margin-top: 2px; }
+  .scard.done .sstat { color: var(--on-success-container); opacity: .85; }
+  .chev { color: var(--on-surface-variant); font-size: 24px; }
+
+  .primary { display: block; width: 100%; height: 56px; border-radius: 28px; background: var(--primary); color: var(--on-primary); font-weight: 500; font-size: 16px; transition: border-radius .35s var(--spring), transform .35s var(--spring); }
+  .primary:active { border-radius: 16px; transform: scale(.98); }
+  .primary:disabled { opacity: .38; }
+  .secondary { display: block; width: 100%; height: 52px; border-radius: 26px; background: var(--secondary-container); color: var(--on-secondary-container); font-weight: 500; transition: border-radius .35s var(--spring); }
+  .secondary:active { border-radius: 14px; }
+  .linkbtn { display: block; margin: 8px auto 0; padding: 12px 16px; color: var(--primary); font-size: 14px; font-weight: 500; }
+  .section { margin-top: 28px; }
+  .section h3 { font-size: 14px; font-weight: 500; color: var(--primary); margin: 0 4px 10px; }
+  .section p { color: var(--on-surface-variant); font-size: 14px; margin: 10px 4px 0; }
+
+  /* Day picker: connected button group */
+  .label { font-size: 14px; font-weight: 500; color: var(--on-surface-variant); margin: 18px 4px 8px; }
+  .days { display: flex; gap: 2px; }
+  .chip { flex: 1 1 0; min-width: 0; height: 48px; font-size: 14px; font-weight: 500; background: var(--surface-highest); color: var(--on-surface-variant); border-radius: 8px; transition: border-radius .35s var(--spring), background .2s, color .2s; }
+  .chip:first-child { border-radius: 24px 8px 8px 24px; }
+  .chip:last-child { border-radius: 8px 24px 24px 8px; }
+  .chip.on { background: var(--primary); color: var(--on-primary); border-radius: 24px; }
+  .chip:active { border-radius: 16px; }
+
+  /* Edit mode */
+  .ex { background: var(--surface-c); border-radius: 24px; padding: 14px; margin: 10px 0; }
+  .exnote { color: var(--on-surface-variant); font-size: 13px; }
+  .ein { width: 100%; border: 0; background: var(--surface-highest); border-radius: 14px; padding: 12px 14px; min-height: 48px; }
+  .ein:focus { outline: 2px solid var(--primary); }
+  .ein.name { font-weight: 500; }
+  .erow { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .ebtn { min-height: 48px; min-width: 48px; padding: 0 16px; border-radius: 24px; background: var(--secondary-container); color: var(--on-secondary-container); font-size: 15px; font-weight: 500; transition: border-radius .3s var(--spring); }
+  .ebtn:active { border-radius: 12px; }
+  .ebtn.danger { background: transparent; color: var(--error); box-shadow: inset 0 0 0 1px var(--outline-variant); }
+  .ebtn:disabled { opacity: .38; }
+  .addbtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 56px; margin-top: 14px; border-radius: 28px; background: var(--primary-container); color: var(--on-primary-container); font-weight: 500; transition: border-radius .35s var(--spring), transform .35s var(--spring); }
+  .addbtn:active { border-radius: 16px; transform: scale(.98); }
+
+  /* Navigation bar */
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface-c); padding: 12px 0 calc(env(safe-area-inset-bottom) + 14px); }
+  nav.tabs .in { max-width: 560px; margin: 0 auto; display: flex; }
+  nav.tabs button { flex: 1; font-size: 12px; font-weight: 500; color: var(--on-surface-variant); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  nav.tabs .ind { width: 56px; height: 32px; border-radius: 16px; display: grid; place-items: center; transition: background .25s, width .4s var(--spring); }
+  nav.tabs button svg { width: 24px; height: 24px; }
+  nav.tabs button.on { color: var(--on-surface); }
+  nav.tabs button.on .ind { background: var(--secondary-container); color: var(--on-secondary-container); width: 64px; }
+
+  /* Past weeks */
+  .yearhead { font-size: 14px; font-weight: 500; color: var(--primary); margin: 22px 4px 8px; }
+  .wlist { display: flex; flex-direction: column; gap: 2px; }
+  .wrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 18px; background: var(--surface-c); border-radius: 6px; text-align: left; }
+  .wlist .wrow:first-child { border-radius: 24px 24px 6px 6px; }
+  .wlist .wrow:last-child { border-radius: 6px 6px 24px 24px; }
+  .wlist .wrow:only-child { border-radius: 24px; }
+  .wrow .n { font-weight: 500; width: 92px; white-space: nowrap; }
+  .wrow .d { flex: 1; color: var(--on-surface-variant); font-size: 14px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wrow .c { font-size: 13px; color: var(--on-surface-variant); }
+  .backup { background: var(--surface-c); border-radius: 28px; padding: 16px 16px 16px 20px; display: flex; gap: 12px; align-items: center; }
+  .backup .bl { flex: 1; font-size: 14px; color: var(--on-surface-variant); line-height: 1.45; }
+  .backup .bb { display: flex; flex-direction: column; gap: 6px; }
+
+  /* Bottom sheets */
+  @keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes sheetIn { from { transform: translateY(100%); } to { transform: none; } }
+  .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 20; display: flex; align-items: flex-end; justify-content: center; animation: scrimIn .2s ease-out; }
+  .sheet { position: relative; background: var(--surface-low); width: 100%; max-width: 560px; max-height: 88vh; overflow: auto; border-radius: 28px 28px 0 0; padding: 34px 20px calc(env(safe-area-inset-bottom) + 22px); animation: sheetIn .5s var(--spring); }
+  .sheet::before { content: ""; position: absolute; top: 12px; left: 50%; width: 32px; height: 4px; margin-left: -16px; border-radius: 2px; background: var(--outline); opacity: .5; }
+  .sheet h2 { margin: 0 0 4px; font-size: 22px; font-weight: 500; }
+  .sheet .meta { color: var(--on-surface-variant); font-size: 14px; margin-bottom: 12px; line-height: 1.5; }
+  .sheet label { display: block; font-size: 13px; font-weight: 500; color: var(--on-surface-variant); margin: 14px 4px 6px; }
+  .sheet input[type=text], .sheet input[type=date], .sheet input[type=number] { width: 100%; height: 52px; padding: 0 16px; border-radius: 14px; border: 0; background: var(--surface-highest); }
+  .sheet .row2 { display: flex; gap: 10px; } .sheet .row2 > div { flex: 1; }
+  .sheet .actions { display: flex; gap: 8px; margin-top: 20px; }
+  .sheet .actions button { flex: 1; height: 52px; border-radius: 26px; background: var(--secondary-container); color: var(--on-secondary-container); font-weight: 500; transition: border-radius .3s var(--spring); }
+  .sheet .actions button:active { border-radius: 14px; }
+  .sheet .actions button.go { background: var(--primary); color: var(--on-primary); }
+  .sheet .actions button.danger { background: var(--error); color: #fff; }
+  .menu { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+  .menu button { display: block; width: 100%; text-align: left; padding: 16px 18px; background: var(--surface-highest); border-radius: 6px; font-weight: 500; }
+  .menu button:first-of-type { border-radius: 20px 20px 6px 6px; }
+  .menu button:last-of-type { border-radius: 6px 6px 20px 20px; }
+  .menu button.danger { color: var(--error); }
+  .hrow { padding: 12px 4px; border-top: 1px solid var(--outline-variant); font-size: 14px; }
+  .hrow .hd { color: var(--on-surface-variant); font-size: 13px; margin-bottom: 3px; }
+  .hrow .hs { font-variant-numeric: tabular-nums; }
+  .best { display: flex; gap: 8px; margin: 10px 0 12px; }
+  .best > div { flex: 1; background: var(--secondary-container); color: var(--on-secondary-container); border-radius: 20px; padding: 12px 14px; }
+  .best > div + div { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+  .best b { display: block; font-size: 17px; font-weight: 500; }
+  .best span { font-size: 12px; opacity: .8; }
+  svg.spark { width: 100%; height: 90px; display: block; margin: 6px 0 4px; }
+  svg.spark polyline { stroke: var(--primary); }
+  .empty { color: var(--on-surface-variant); text-align: center; padding: 40px 0; }
+
+  /* Exercise picker */
+  .sheet.picker { padding-top: 0; height: 88vh; }
+  .pickhead { position: sticky; top: 0; background: var(--surface-low); padding: 30px 0 10px; z-index: 1; }
+  .pickhead .t { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .pickhead .t button { color: var(--primary); font-weight: 500; padding: 10px 4px; }
+  .search { width: 100%; height: 56px; padding: 0 20px; border-radius: 28px; border: 0; background: var(--surface-highest); }
+  .search:focus { outline: 2px solid var(--primary); }
+  .ghead { font-size: 14px; font-weight: 500; color: var(--primary); margin: 20px 4px 8px; }
+  .prow { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 16px 18px; background: var(--surface-c); border-radius: 6px; margin-top: 2px; }
+  .ghead + .prow { border-radius: 20px 20px 6px 6px; }
+  .prow:has(+ .ghead), .prow:last-child { border-radius: 6px 6px 20px 20px; }
+  .ghead + .prow:has(+ .ghead) { border-radius: 20px; }
+  .prow .pn { flex: 1; font-weight: 500; }
+  .prow .pl { color: var(--on-surface-variant); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .prow .plus { width: 32px; height: 32px; border-radius: 16px; background: var(--primary-container); color: var(--on-primary-container); display: grid; place-items: center; font-size: 20px; }
+  .prow.in { opacity: .5; }
+  .prow.in .plus { background: var(--success-container); color: var(--on-success-container); font-size: 14px; }
+  .newex { background: var(--surface-c); border-radius: 24px; padding: 16px; margin-top: 14px; }
+  .gchips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .gchip { height: 36px; padding: 0 14px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--outline-variant); font-size: 14px; font-weight: 500; }
+  .gchip.on { background: var(--secondary-container); color: var(--on-secondary-container); box-shadow: none; }
+
+  /* Session: exercise list */
+  .exlist { display: flex; flex-direction: column; gap: 3px; margin-top: 14px; }
+  .exr { position: relative; background: var(--surface-c); border-radius: 8px; padding: 8px 12px 14px 14px; transition: background .3s, border-radius .35s var(--spring); }
+  .exlist .exr:first-child { border-radius: 28px 28px 8px 8px; }
+  .exlist .exr:last-child { border-radius: 8px 8px 28px 28px; }
+  .exlist .exr:only-child { border-radius: 28px; }
+  .exr.done { background: var(--success-container); color: var(--on-success-container); }
+  .exr-top { display: flex; align-items: center; gap: 2px; }
+  .exr-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; text-align: left; min-height: 44px; }
+  .exr-name .nm { font-weight: 500; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .exr-name .dots { color: var(--on-surface-variant); font-size: 18px; letter-spacing: 1px; padding: 0 4px; }
+  .exr.done .exr-name .dots { color: inherit; opacity: .7; }
+  .grip { width: 30px; height: 44px; margin-left: -8px; flex: 0 0 auto; display: grid; place-items: center; color: var(--on-surface-variant); opacity: .6; touch-action: none; cursor: grab; }
+  .exr.done .grip { color: inherit; }
+  .grip svg { width: 12px; height: 18px; }
+  .exr.dragging { z-index: 5; border-radius: 24px !important; background: var(--surface-highest); box-shadow: 0 8px 24px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.1); }
+  .exr.done.dragging { background: var(--success-container); }
+  .exr.dragging .grip { opacity: 1; color: var(--primary); cursor: grabbing; }
+  .exlist.sorting .exr:not(.dragging) { transition: transform .25s var(--spring); }
+  .tick { width: 48px; height: 48px; flex: 0 0 auto; border-radius: 24px; background: var(--surface-highest); display: grid; place-items: center; transition: border-radius .45s var(--spring-bouncy), background .25s; }
+  .tick::before { content: ""; width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--outline); }
+  .tick svg { display: none; }
+  .exr.done .tick { background: var(--success); border-radius: 16px; }
+  .exr.done .tick::before { width: 18px; height: 9px; border-radius: 0; box-shadow: none; border: solid var(--on-success); border-width: 0 0 3px 3px; transform: translateY(-2px) rotate(-45deg); }
+  @keyframes tickpop { 0% { transform: scale(1); } 35% { transform: scale(1.18) rotate(-6deg); } 100% { transform: scale(1); } }
+  .exr.justdone .tick { animation: tickpop .5s var(--spring-bouncy); }
+  .cells { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .cell { position: relative; width: 74px; height: 46px; display: flex; background: var(--surface-lowest); border-radius: 16px; transition: border-radius .35s var(--spring); }
+  .exr.done .cell { background: color-mix(in srgb, var(--surface-lowest) 70%, transparent); }
+  .cell .half:first-of-type { border-radius: 16px 0 0 16px; }
+  .cell .half:last-of-type { border-radius: 0 16px 16px 0; }
+  .half { height: 100%; font-variant-numeric: tabular-nums; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; transition: background .15s; }
+  .hw { flex: 1.2; font-weight: 600; font-size: 16px; text-align: right; padding-right: 2px; }
+  .hr { flex: 1; font-size: 15px; font-weight: 500; color: var(--on-surface-variant); text-align: left; padding-left: 2px; }
+  .exr.done .hr { color: inherit; opacity: .75; }
+  .half.long { font-size: 13px; }
+  .half.empty { font-weight: 400; color: var(--on-surface-variant); }
+  .half.scrub { background: var(--primary); color: var(--on-primary) !important; opacity: 1 !important; }
+  .cell.pr { background: var(--tertiary-container); color: var(--on-tertiary-container); border-radius: 16px 16px 4px 16px; }
+  .cell.pr .hr { color: inherit; }
+  .prb { position: absolute; top: -8px; right: -4px; background: var(--tertiary); color: var(--surface); font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 2px 6px; border-radius: 8px; pointer-events: none; z-index: 1; }
+  .addcell { width: 40px; height: 46px; border-radius: 16px; color: var(--primary); font-size: 22px; line-height: 1; box-shadow: inset 0 0 0 1.5px var(--outline-variant); }
+  .exr.done .addcell { color: inherit; box-shadow: inset 0 0 0 1.5px currentColor; opacity: .5; }
+  .bubble { position: fixed; z-index: 40; transform: translate(-50%, -100%); background: var(--primary); color: var(--on-primary); font-weight: 600; font-size: 22px; padding: 10px 18px; border-radius: 20px; pointer-events: none; opacity: 0; transition: opacity .12s; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .bubble.on { opacity: 1; }
+  .confetti { position: fixed; z-index: 40; width: 9px; height: 13px; border-radius: 3px; pointer-events: none; }
+
+  /* Wavy progress indicator */
+  .progress { margin: 18px 4px 0; }
+  .progress .pt { display: flex; justify-content: space-between; font-size: 14px; color: var(--on-surface-variant); font-weight: 500; margin-bottom: 6px; }
+  .progress.full .pt { color: var(--success); }
+  .wave { display: block; width: 100%; height: 14px; overflow: visible; }
+  .wave .track { stroke: var(--secondary-container); }
+  .wave .act { stroke: var(--primary); }
+  .wave .stop { fill: var(--primary); }
+  .progress.full .wave .act { stroke: var(--success); }
+  @keyframes waveshift { to { transform: translateX(-24px); } }
+  .wave .wv { animation: waveshift 1.1s linear infinite; }
+
+  /* Number sheet */
+  .vhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .seg { display: flex; gap: 2px; margin-top: 14px; }
+  .seg button { flex: 1; height: 48px; background: var(--surface-highest); color: var(--on-surface-variant); font-weight: 500; border-radius: 8px; transition: border-radius .35s var(--spring), background .2s; }
+  .seg button:first-child { border-radius: 24px 8px 8px 24px; }
+  .seg button:last-child { border-radius: 8px 24px 24px 8px; }
+  .seg button.on { background: var(--primary); color: var(--on-primary); border-radius: 24px; }
+  .wheels { display: flex; gap: 12px; margin-top: 16px; }
+  .wcol { flex: 1; min-width: 0; }
+  .wlab { font-size: 13px; font-weight: 500; color: var(--on-surface-variant); text-align: center; margin-bottom: 6px; }
+  .wtype { width: 100%; height: 56px; border-radius: 16px; border: 0; background: var(--surface-highest); text-align: center; font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .wtype:focus { outline: 2px solid var(--primary); }
+  .wheelwrap { position: relative; margin-top: 8px; border-radius: 24px; background: var(--surface-c); overflow: hidden; }
+  .wheelwrap::before { content: ""; position: absolute; left: 6px; right: 6px; top: 96px; height: 48px; border-radius: 16px; background: var(--primary-container); pointer-events: none; }
+  .wheelwrap::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(var(--surface-c), transparent 30%, transparent 70%, var(--surface-c)); }
+  .wheel { position: relative; height: 240px; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; overscroll-behavior: contain; }
+  .wheel::-webkit-scrollbar { display: none; }
+  .wpad { height: 96px; }
+  .witem { height: 48px; line-height: 48px; text-align: center; font-size: 20px; font-variant-numeric: tabular-nums; color: var(--on-surface-variant); scroll-snap-align: center; position: relative; z-index: 1; transition: font-size .15s; }
+  .witem.sel { color: var(--on-primary-container); font-weight: 600; font-size: 24px; }
+  .vnav { display: flex; gap: 8px; margin-top: 16px; }
+  .vnav button { flex: 1; height: 56px; border-radius: 28px; background: var(--secondary-container); color: var(--on-secondary-container); font-weight: 500; transition: border-radius .3s var(--spring); }
+  .vnav button:active { border-radius: 16px; }
+  .vnav button.go { background: var(--primary); color: var(--on-primary); flex: 1.3; }
+  .vnav button:disabled { opacity: .38; }
+  .vextra { display: flex; justify-content: space-between; margin-top: 8px; }
+  .vextra button { padding: 12px 4px; font-size: 14px; font-weight: 500; color: var(--primary); }
+  .vextra button.danger { color: var(--error); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top" id="header"></header>
+  <main id="main"></main>
+</div>
+<nav class="tabs"><div class="in">
+  <button id="tabWeek"><span class="ind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg></span>This week</button>
+  <button id="tabPast"><span class="ind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>Past weeks</button>
+</div></nav>
+<div id="modal"></div>
+
+<script>
+(() => {
+  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const DAY_FULL = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
+  const LS_KEY = "gymtracker.overrides.v1";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const uid = () => Math.random().toString(36).slice(2, 9);
+
+  // ---------- state ----------
+  let archive = {};          // id -> week imported from the sheet
+  let overrides = {};        // id -> week saved in the app (wins over archive)
+  let weeks = [];            // merged, sorted oldest first
+  let curId = null;          // week being viewed
+  let curSi = null;          // session index being viewed
+  let view = "week";         // "week" | "session" | "past"
+  let editMode = false;
+  let db = null, dbState = "connecting";
+  const timers = {}, writing = {}, again = {}, pending = new Set();
+  let deferredRender = false;
+
+  // ---------- helpers ----------
+  function parseDate(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+  function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function fmtDate(s, withYear) {
+    const d = typeof s === "string" ? parseDate(s) : s;
+    const o = { day: "numeric", month: "short" };
+    if (withYear || d.getFullYear() !== new Date().getFullYear()) o.year = "numeric";
+    return d.toLocaleDateString("en-AU", o);
+  }
+  function weekRange(w) { const a = parseDate(w.start), b = new Date(a); b.setDate(b.getDate() + 6); return fmtDate(a) + " – " + fmtDate(b); }
+  function mondayOf(d) { const x = new Date(d); x.setDate(x.getDate() - (x.getDay() + 6) % 7); x.setHours(0, 0, 0, 0); return x; }
+  function num(v) {
+    const s = String(v ?? "").replace(/\s/g, "");
+    if (!s) return NaN;
+    if (/^[\d.]+(\+[\d.]+)*$/.test(s)) return s.split("+").reduce((a, b) => a + parseFloat(b || 0), 0);
+    return parseFloat(s);
+  }
+  function key(name) { return String(name || "").toLowerCase().replace(/\([^)]*\)/g, "").replace(/[^a-z0-9]/g, "").replace(/s$/, ""); }
+  const sessionDone = (s) => !s.missed && !!s.day;
+  const named = (s) => s.exercises.filter((e) => e.name.trim());
+  const sessionName = (s, i) => s.label || "Session " + (i + 1);
+
+  function normaliseArchiveWeek(w) {
+    return {
+      id: w.id, num: w.num, start: w.start, tag: w.tag || "",
+      sessions: w.sessions.map((s) => ({
+        day: s.day ? s.day.slice(0, 3) : "", missed: s.status === "missed", label: s.label || "", note: s.note || "",
+        exercises: s.exercises.map((e) => ({ name: e.name, sets: e.sets, done: e.done === true, note: e.note || "" })),
+      })),
+    };
+  }
+  function rebuild() {
+    const all = { ...archive };
+    for (const [id, w] of Object.entries(overrides)) all[id] = w;
+    weeks = Object.values(all).filter((w) => w && !w.deleted && w.start)
+      .sort((a, b) => a.start.localeCompare(b.start) || (a.num || 0) - (b.num || 0));
+    if (!curId || !weeks.find((w) => w.id === curId)) curId = latest() ? latest().id : null;
+  }
+  const latest = () => weeks[weeks.length - 1];
+  const cur = () => weeks.find((w) => w.id === curId);
+  const curSession = () => { const w = cur(); return w && curSi != null ? w.sessions[curSi] : null; };
+
+  // ---------- saving ----------
+  function loadLocal() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch { return {}; } }
+  let saveTimer = null, storageError = false;
+  function writeLocal() {
+    clearTimeout(saveTimer); saveTimer = null;
+    try { localStorage.setItem(LS_KEY, JSON.stringify(overrides)); storageError = false; }
+    catch (e) { storageError = true; console.warn(e); }
+    showSaved();
+  }
+  function saveLocal() { clearTimeout(saveTimer); saveTimer = setTimeout(writeLocal, 250); }
+  window.addEventListener("pagehide", () => { if (saveTimer) writeLocal(); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden && saveTimer) writeLocal(); });
+  function touch(week) {
+    week.updatedAt = Date.now();
+    overrides[week.id] = week;
+    saveLocal();
+    pending.add(week.id);
+    showSaved();
+    clearTimeout(timers[week.id]);
+    timers[week.id] = setTimeout(() => flush(week.id), 700);
+  }
+  async function flush(id) {
+    if (!db) { pending.delete(id); showSaved(); return; }
+    if (writing[id]) { again[id] = true; return; }
+    writing[id] = true;
+    try {
+      await db.collection("weeks").doc(id).set(clone(overrides[id]));
+      if (!again[id]) pending.delete(id);
+      dbState = "live";
+    } catch (e) {
+      if (e && e.code === "unavailable") setTimeout(() => flush(id), 1500 + Math.random() * 1000);
+      else { dbState = "error"; console.warn("save failed", e); }
+    }
+    writing[id] = false;
+    if (again[id]) { again[id] = false; flush(id); }
+    showSaved();
+  }
+  function savedText() {
+    if (pending.size) return ["Saving…", false];
+    if (dbState === "live") return ["Saved", false];
+    if (dbState === "connecting") return ["", false];
+    if (storageError) return ["Couldn't save — phone storage full?", true];
+    if (dbState === "local") return [saveTimer ? "Saving…" : "Saved", false];
+    return ["Not synced — saved on this device", true];
+  }
+  function showSaved() { const el = $("saved"); if (!el) return; const [t, warn] = savedText(); el.textContent = t; el.classList.toggle("warn", warn); }
+
+  const LIB_KEY = "gymtracker.customlib.v1";
+  let libWriting = false, libAgain = false;
+  function loadCustom() { try { customLib = JSON.parse(localStorage.getItem(LIB_KEY) || "[]"); } catch { customLib = []; } }
+  async function saveCustom() {
+    try { localStorage.setItem(LIB_KEY, JSON.stringify(customLib)); } catch {}
+    if (!db) return;
+    if (libWriting) { libAgain = true; return; }
+    libWriting = true;
+    try { await db.doc("library/custom").set({ items: clone(customLib), updatedAt: Date.now() }); } catch (e) { console.warn("library save failed", e); }
+    libWriting = false;
+    if (libAgain) { libAgain = false; saveCustom(); }
+  }
+
+  async function connectDb() {
+    try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch { db = null; }
+    if (!db) { dbState = "local"; showSaved(); return; }
+    const timeout = setTimeout(() => { if (dbState === "connecting") { dbState = "error"; showSaved(); } }, 10000);
+    db.doc("library/custom").onSnapshot((d) => {
+      if (libWriting) return;
+      const remote = d.exists ? (d.data().items || []) : [];
+      const merged = [...remote];
+      for (const x of customLib) if (!merged.some((y) => key(y.name) === key(x.name))) merged.push(x);
+      const grew = merged.length > remote.length;
+      customLib = merged;
+      try { localStorage.setItem(LIB_KEY, JSON.stringify(customLib)); } catch {}
+      if (grew && !d.metadata.fromCache) saveCustom();
+    }, (e) => console.warn(e));
+    db.collection("weeks").onSnapshot((snap) => {
+      if (!snap.metadata.fromCache) { clearTimeout(timeout); if (dbState !== "error") dbState = "live"; }
+      let changed = false;
+      const local = loadLocal();
+      for (const d of snap.docs) {
+        if (pending.has(d.id)) continue;
+        const remote = d.data(), mine = local[d.id];
+        if (mine && (mine.updatedAt || 0) > (remote.updatedAt || 0)) { overrides[d.id] = mine; pending.add(d.id); flush(d.id); continue; }
+        if (!overrides[d.id] || (overrides[d.id].updatedAt || 0) !== (remote.updatedAt || 0)) { overrides[d.id] = clone(remote); changed = true; }
+      }
+      if (!snap.metadata.fromCache) {
+        const ids = new Set(snap.docs.map((d) => d.id));
+        for (const [id, w] of Object.entries(local)) if (!ids.has(id) && !pending.has(id)) { overrides[id] = w; pending.add(id); flush(id); }
+      }
+      saveLocal(); showSaved();
+      if (changed) safeRender();
+    }, (e) => { clearTimeout(timeout); dbState = "error"; showSaved(); console.warn(e); });
+  }
+  function safeRender() {
+    if (scrub || drag) { deferredRender = true; return; }
+    const a = document.activeElement;
+    if (a && a.tagName === "INPUT" && $("main").contains(a)) { deferredRender = true; return; }
+    rebuild(); render();
+  }
+  document.addEventListener("focusout", () => setTimeout(() => {
+    if (deferredRender && !(document.activeElement && document.activeElement.tagName === "INPUT")) { deferredRender = false; rebuild(); render(); }
+  }, 50));
+
+  // ---------- history ----------
+  function historyFor(name) {
+    const k = key(name), out = [];
+    for (const w of weeks) for (const s of w.sessions) {
+      if (!sessionDone(s)) continue;
+      for (const e of s.exercises) {
+        if (key(e.name) !== k) continue;
+        const sets = (e.sets || []).filter((x) => x.w || x.r);
+        if (sets.length) out.push({ week: w, session: s, ex: e, sets });
+      }
+    }
+    return out.reverse();
+  }
+  const setText = (x) => (x.w ? x.w + (x.r ? "×" + x.r : "") : (x.r || "") + " reps");
+
+  // ---------- exercise library ----------
+  const GROUPS = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms", "Legs", "Hamstrings & glutes", "Calves", "Core", "Other"];
+  const CURATED = {
+    "Chest": ["Cable fly", "Chest fly", "Dips", "Dumbbell bench", "Dumbbell press", "Flat bench", "Incline bench", "Incline dumbbell press", "Pec cable", "Pec deck"],
+    "Back": ["Back extension", "Bent over row", "Cable row", "Close grip lat pulldown", "Close grip pull up", "Iso lat pulldown", "Lat pulldown", "Pullup", "Seated row", "Single arm cable row", "Single arm pulldown", "T bar row", "Wide grip pull down"],
+    "Shoulders": ["Cable lat raise", "DB shoulder press", "Dumbbell lat raise", "Face pull", "Overhead press", "Rear delt cable", "Rear delt fly", "Seated OHP", "Shoulder rehab"],
+    "Biceps": ["Barbell curl", "Cable bar curl", "Dumbbell curl", "EZ curl", "Hammer curl", "Incline curl", "Preacher curl", "Rope curl", "Thick bar curl"],
+    "Triceps": ["One arm rope pulldown", "Push down", "Rope pulldown", "Skull crusher", "Tri overhead", "Tri pulldown", "Tricep dips"],
+    "Forearms": ["Cable wrist curl", "Forearm curl", "Wrist curl"],
+    "Legs": ["Bulgarian split squat", "Hack squat", "Hor leg press", "Leg extension", "Leg press", "Seated leg press", "Smith squat", "Squat"],
+    "Hamstrings & glutes": ["Hamstring curl", "Leg curl", "RDL"],
+    "Calves": ["Calf raise", "Seated calf raise", "Standing calf raise"],
+    "Core": ["Ab crunch", "Cable crunch", "Decline situp", "Decline situp twist", "Leg raise", "Russian twists"],
+  };
+  const curatedGroup = {};
+  for (const [g, names] of Object.entries(CURATED)) for (const n of names) curatedGroup[key(n)] = g;
+  let customLib = []; // [{name, group}] added by the user
+  function groupOf(name) {
+    const c = customLib.find((x) => key(x.name) === key(name));
+    if (c) return c.group;
+    if (curatedGroup[key(name)]) return curatedGroup[key(name)];
+    const n = String(name).toLowerCase().replace(/\([^)]*\)/g, "");
+    if (/wrist|forearm/.test(n)) return "Forearms";
+    if (/calf/.test(n)) return "Calves";
+    if (/ham|leg curl|rdl|deadlift|glute|hip thrust/.test(n)) return "Hamstrings & glutes";
+    if (/curl|bicep/.test(n)) return "Biceps";
+    if (/tri|skull|push ?down|rope pull/.test(n)) return "Triceps";
+    if (/crunch|sit ?up|leg raise|plank|twist|\bab/.test(n)) return "Core";
+    if (/squat|leg press|leg ext|lunge|bulgarian/.test(n)) return "Legs";
+    if (/lat raise|delt|shoulder|ohp|overhead press|face pull/.test(n)) return "Shoulders";
+    if (/row|pull ?up|pull ?down|pulldown|chin|back ext/.test(n)) return "Back";
+    if (/bench|fly|pec|chest|dip|press/.test(n)) return "Chest";
+    return "Other";
+  }
+  const cleanName = (n) => String(n).replace(/\s*\([^)]*\)/g, "").trim();
+  function library() {
+    const map = new Map();
+    const addName = (n, g) => { const c = cleanName(n), k = key(c); if (!k || map.has(k) || /^(added|subbed)\b/i.test(c) || /\bsub$/i.test(c)) return; map.set(k, { name: c, group: g || groupOf(c) }); };
+    for (const x of customLib) addName(x.name, x.group);
+    for (const [g, names] of Object.entries(CURATED)) for (const n of names) addName(n, g);
+    for (const w of weeks.slice(-12)) for (const s of w.sessions) for (const e of s.exercises) addName(e.name);
+    return [...map.values()];
+  }
+  function lastLogged() { // key -> most recent logged sets
+    const m = new Map();
+    for (const w of weeks) for (const s of w.sessions) if (sessionDone(s)) for (const e of s.exercises) {
+      const sets = (e.sets || []).filter((x) => x.w || x.r);
+      if (sets.length) m.set(key(e.name), { sets, week: w });
+    }
+    return m;
+  }
+
+  function openPicker() {
+    const s = curSession(), w = cur();
+    const last = lastLogged();
+    let q = "", newGroup = null;
+    const inSession = () => new Set(s.exercises.map((e) => key(e.name)));
+    function list() {
+      const lib = library(), have = inSession();
+      const ql = q.trim().toLowerCase();
+      let h = "";
+      for (const g of GROUPS) {
+        const items = lib.filter((x) => x.group === g && (!ql || x.name.toLowerCase().includes(ql))).sort((a, b) => a.name.localeCompare(b.name));
+        if (!items.length) continue;
+        h += `<div class="ghead">${esc(g)}</div>`;
+        for (const x of items) {
+          const isIn = have.has(key(x.name)), l = last.get(key(x.name));
+          h += `<button class="prow${isIn ? " in" : ""}" data-pick="${esc(x.name)}" ${isIn ? "disabled" : ""}><span class="pn">${esc(x.name)}</span>${l ? `<span class="pl">${esc(setText(l.sets[0]))}</span>` : ""}<span class="plus">${isIn ? "✓" : "+"}</span></button>`;
+        }
+      }
+      if (ql && !lib.some((x) => key(x.name) === key(q))) {
+        h += `<div class="newex"><div style="font-weight:600">Add “${esc(q.trim())}” as a new exercise</div>
+          <div style="color:var(--muted);font-size:13px;margin-top:4px">Which muscle group?</div>
+          <div class="gchips">${GROUPS.map((g) => `<button class="gchip${newGroup === g ? " on" : ""}" data-group="${esc(g)}">${esc(g)}</button>`).join("")}</div>
+          <button class="primary" data-newex style="margin-top:12px;padding:12px" ${newGroup ? "" : "disabled"}>Add to session</button></div>`;
+      }
+      if (!h) h = `<div class="empty">Type a name to add a new exercise.</div>`;
+      return h;
+    }
+    const scrim = showSheet(`<div class="pickhead"><div class="t"><h2 style="margin:0">Add exercise</h2><button data-close>Close</button></div>
+      <input class="search" id="pq" type="text" placeholder="Search or type a new exercise" autocomplete="off"></div>
+      <div id="plist">${list()}</div>`, "picker"), plist = $("plist");
+    $("pq").addEventListener("input", (ev) => { q = ev.target.value; plist.innerHTML = list(); });
+    scrim.addEventListener("click", (ev) => {
+      if (ev.target === scrim || ev.target.closest("[data-close]")) return closeModal();
+      const g = ev.target.closest("[data-group]");
+      if (g) { newGroup = g.dataset.group; plist.innerHTML = list(); return; }
+      if (ev.target.closest("[data-newex]")) {
+        const name = q.trim();
+        customLib.push({ name, group: newGroup });
+        saveCustom();
+        return addExercise(name);
+      }
+      const b = ev.target.closest("[data-pick]");
+      if (b && !b.disabled) addExercise(b.dataset.pick);
+    });
+    function addExercise(name) {
+      const l = last.get(key(name));
+      s.exercises.push({ name, sets: l ? clone(l.sets) : [{ w: "", r: "" }, { w: "", r: "" }, { w: "", r: "" }], done: false, note: "" });
+      touch(w); render();
+      closeModal(() => {
+        const cards = $("main").querySelectorAll(".ex");
+        cards.length && cards[cards.length - 1].scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  }
+
+  const ITEM = 48;
+  const fmtNum = (v) => String(Math.round(v * 100) / 100);
+  function wheelValues(f, curVal) {
+    const step = f === "w" ? 2.5 : 1, max = f === "w" ? 300 : 60;
+    const vals = [""];
+    for (let i = 0; i * step <= max + 1e-9; i++) vals.push(fmtNum(i * step));
+    if (curVal && !vals.includes(curVal)) {
+      const n = num(curVal);
+      let at = vals.findIndex((v, i) => i > 0 && num(v) > n);
+      if (isNaN(n) || at < 0) at = vals.length;
+      vals.splice(at, 0, curVal);
+    }
+    return vals;
+  }
+
+  function openValSheet(ei, k, f, allMode = false) {
+    const w = cur(), s = curSession();
+    let all = allMode;
+    const scrim = showSheet(`<div class="vhead"><h2 id="vname"></h2></div>
+      <div class="seg" id="vseg"><button id="seg-one"></button><button id="seg-all"></button></div>
+      <div class="wheels">
+        <div class="wcol"><div class="wlab">Weight (kg)</div><input class="wtype" id="in-w" inputmode="decimal" autocomplete="off"><div class="wheelwrap"><div class="wheel" id="wh-w"></div></div></div>
+        <div class="wcol"><div class="wlab">Reps</div><input class="wtype" id="in-r" inputmode="decimal" autocomplete="off"><div class="wheelwrap"><div class="wheel" id="wh-r"></div></div></div>
+      </div>
+      <div class="vnav"><button id="v-prev">‹ Prev</button><button id="v-next">Next ›</button><button class="go" id="v-done">Done</button></div>
+      <div class="vextra"><button id="v-del" class="danger">Delete this set</button><button id="v-add">+ Add a set</button></div>`);
+    const st = { w: {}, r: {} };
+    const ex = () => s.exercises[ei], set = () => ex().sets[k];
+    const order = () => { const o = []; s.exercises.forEach((x, i) => x.sets.forEach((_, j) => o.push([i, j]))); return o; };
+    const exOrder = () => s.exercises.map((x, i) => i).filter((i) => s.exercises[i].sets.length);
+
+    function commit(f2, v) {
+      const targets = all ? ex().sets : [set()];
+      if (targets.every((x) => x[f2] === v)) return;
+      targets.forEach((x) => { x[f2] = v; });
+      touch(w);
+      render();
+    }
+    function buildWheel(f2) {
+      const el = $("wh-" + f2), curV = set()[f2] || "", vals = wheelValues(f2, curV);
+      st[f2].vals = vals;
+      el.innerHTML = `<div class="wpad"></div>` + vals.map((v, i) => `<div class="witem" data-i="${i}">${v === "" ? "–" : esc(v)}</div>`).join("") + `<div class="wpad"></div>`;
+      const i = Math.max(0, vals.indexOf(curV));
+      st[f2].sel = null;
+      st[f2].ignore = true;
+      el.scrollTop = i * ITEM;
+      mark(f2, i);
+      clearTimeout(st[f2].it);
+      st[f2].it = setTimeout(() => { st[f2].ignore = false; }, 150);
+    }
+    function mark(f2, i) {
+      const el = $("wh-" + f2);
+      if (st[f2].sel != null) { const o = el.children[st[f2].sel + 1]; o && o.classList.remove("sel"); }
+      const n = el.children[i + 1]; n && n.classList.add("sel");
+      st[f2].sel = i;
+    }
+    function load() {
+      if (!ex() || !ex().sets.length) return closeModal();
+      if (k >= ex().sets.length) k = ex().sets.length - 1;
+      const n = ex().sets.length;
+      $("vname").textContent = ex().name;
+      $("seg-one").textContent = `Set ${k + 1}`;
+      $("seg-all").textContent = n > 1 ? `All ${n} sets` : "All sets";
+      $("seg-one").classList.toggle("on", !all);
+      $("seg-all").classList.toggle("on", all);
+      for (const f2 of ["w", "r"]) { $("in-" + f2).value = set()[f2] || ""; buildWheel(f2); }
+      if (all) {
+        const eo = exOrder(), p = eo.indexOf(ei);
+        $("v-prev").disabled = p <= 0;
+        $("v-next").disabled = p < 0 || p >= eo.length - 1;
+        $("v-next").textContent = "Next ›";
+      } else {
+        const o = order(), p = o.findIndex(([a, b]) => a === ei && b === k), nx = o[p + 1];
+        $("v-prev").disabled = p <= 0;
+        $("v-next").disabled = !nx;
+        $("v-next").textContent = "Next ›";
+      }
+      $("v-del").textContent = all ? "" : `Delete set ${k + 1}`;
+      $("v-del").style.visibility = all ? "hidden" : "visible";
+    }
+    for (const f2 of ["w", "r"]) {
+      const el = $("wh-" + f2), input = $("in-" + f2);
+      el.addEventListener("scroll", () => {
+        if (st[f2].ignore) return;
+        const i = Math.min(st[f2].vals.length - 1, Math.max(0, Math.round(el.scrollTop / ITEM)));
+        if (i !== st[f2].sel) {
+          mark(f2, i);
+          input.value = st[f2].vals[i];
+          buzz(4);
+        }
+        clearTimeout(st[f2].t);
+        st[f2].t = setTimeout(() => commit(f2, st[f2].vals[st[f2].sel]), 120);
+      }, { passive: true });
+      el.addEventListener("click", (ev) => {
+        const it = ev.target.closest(".witem");
+        if (it) el.scrollTo({ top: +it.dataset.i * ITEM, behavior: "smooth" });
+      });
+      input.addEventListener("input", () => commit(f2, input.value.trim()));
+      input.addEventListener("change", () => buildWheel(f2));
+      input.addEventListener("focus", () => input.select());
+      input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); input.blur(); } });
+    }
+    $("seg-one").onclick = () => { all = false; load(); };
+    $("seg-all").onclick = () => { all = true; load(); };
+    $("v-prev").onclick = () => {
+      if (all) { const eo = exOrder(), p = eo.indexOf(ei); if (p > 0) { ei = eo[p - 1]; k = 0; } }
+      else { const o = order(), p = o.findIndex(([a, b]) => a === ei && b === k); if (p > 0) [ei, k] = o[p - 1]; }
+      load();
+    };
+    $("v-next").onclick = () => {
+      if (all) { const eo = exOrder(), p = eo.indexOf(ei); if (p >= 0 && p < eo.length - 1) { ei = eo[p + 1]; k = 0; } }
+      else { const o = order(), p = o.findIndex(([a, b]) => a === ei && b === k); if (o[p + 1]) [ei, k] = o[p + 1]; }
+      load();
+    };
+    $("v-del").onclick = () => {
+      ex().sets.splice(k, 1);
+      touch(w); render();
+      if (!ex().sets.length) return closeModal();
+      if (k >= ex().sets.length) k = ex().sets.length - 1;
+      load();
+    };
+    $("v-add").onclick = () => {
+      const l = ex().sets[ex().sets.length - 1];
+      ex().sets.push(l ? { ...l } : { w: "", r: "" });
+      k = ex().sets.length - 1; all = false;
+      touch(w); render(); load();
+    };
+    $("v-done").onclick = () => closeModal();
+    scrim.addEventListener("click", (ev) => { if (ev.target === scrim) closeModal(); });
+    load();
+  }
+
+  function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch {} }
+
+  function exerciseMenu(ei) {
+    const w = cur(), s = curSession(), e = s.exercises[ei];
+    openModal(`<h2>${esc(e.name)}</h2><div class="meta">${e.sets.length} sets</div><div class="menu">
+      ${e.sets.length ? `<button data-m="all">Set weight and reps for all sets</button>` : ""}
+      <button data-m="add">Add a set</button>
+      ${e.sets.length ? `<button data-m="del">Remove the last set</button>` : ""}
+      <button data-m="hist">History</button>
+      <button class="danger" data-m="rm">Remove exercise from this session</button></div>
+      <div class="actions"><button data-m="close">Close</button></div>`, (a) => {
+      if (a === "close") return closeModal();
+      if (a === "all") return closeModal(() => openValSheet(ei, 0, "w", true));
+      if (a === "hist") return closeModal(() => showHistory(e.name));
+      if (a === "rm") return closeModal(() => confirmRemove(e));
+      if (a === "add") { const l = e.sets[e.sets.length - 1]; e.sets.push(l ? { ...l } : { w: "", r: "" }); }
+      if (a === "del") e.sets.pop();
+      touch(w); render(); closeModal();
+    });
+  }
+
+  function confirmRemove(e) {
+    const w = cur(), s = curSession();
+    openModal(`<h2>Remove ${esc(e.name)}?</h2><div class="meta">It'll be taken out of ${esc(sessionName(s, curSi))} this week, and won't be copied into future weeks. Your past history for it stays.</div>
+      <div class="actions"><button data-m="cancel">Cancel</button><button class="danger" data-m="rm">Remove</button></div>`, (a) => {
+      closeModal();
+      if (a !== "rm") return;
+      s.exercises.splice(s.exercises.indexOf(e), 1);
+      touch(w); render();
+    });
+  }
+
+  // ---------- backup ----------
+  const APP_VERSION = "2";
+  const EXP_KEY = "gymtracker.lastExport";
+  function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+  function exportBackup() {
+    if (saveTimer) writeLocal();
+    const data = { app: "gym-tracker", version: 1, exportedAt: new Date().toISOString(), weeks: weeks.map(clone), customLib: clone(customLib) };
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `gym-backup-${iso(new Date())}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    try { localStorage.setItem(EXP_KEY, String(Date.now())); } catch {}
+    openModal(`<h2>Backup saved</h2><div class="meta">It's in your Downloads folder as <b>gym-backup-${iso(new Date())}.json</b>. Keep a copy somewhere safe, like Google Drive.</div>
+      <div class="actions"><button data-m="close">OK</button></div>`, () => closeModal(() => render()));
+  }
+  const importInput = document.createElement("input");
+  importInput.type = "file"; importInput.accept = ".json,application/json"; importInput.style.display = "none";
+  document.body.appendChild(importInput);
+  importInput.addEventListener("change", async () => {
+    const file = importInput.files[0];
+    importInput.value = "";
+    if (!file) return;
+    let data;
+    try { data = JSON.parse(await file.text()); } catch { data = null; }
+    const list = data && Array.isArray(data.weeks) ? data.weeks.filter((w) => w && w.id && w.start && Array.isArray(w.sessions)) : [];
+    if (!list.length) {
+      return openModal(`<h2>Couldn't read that file</h2><div class="meta">Pick a backup made with this app's Export button (a .json file).</div><div class="actions"><button data-m="close">OK</button></div>`, () => closeModal());
+    }
+    const sheetFormat = list.some((w) => w.sessions.some((s) => "status" in s));
+    const ready = list.map((w) => (sheetFormat ? normaliseArchiveWeek(w) : w)).sort((a, b) => a.start.localeCompare(b.start));
+    const here = weeks.length;
+    openModal(`<h2>Import this backup?</h2>
+      <div class="meta">It has <b>${ready.length} weeks</b> (${fmtDate(ready[0].start, true)} to ${fmtDate(ready[ready.length - 1].start, true)}).${here ? ` It will <b>replace</b> the ${here} weeks currently on this phone.` : ""}</div>
+      <div class="actions"><button data-m="cancel">Cancel</button><button class="go" data-m="go">Import</button></div>`, (a) => {
+      if (a === "cancel") return closeModal();
+      overrides = {};
+      for (const w of ready) { w.updatedAt = w.updatedAt || Date.now(); overrides[w.id] = w; }
+      customLib = Array.isArray(data.customLib) ? data.customLib.filter((x) => x && x.name && x.group) : [];
+      try { localStorage.setItem(LIB_KEY, JSON.stringify(customLib)); } catch {}
+      try { const t = Date.parse(data.exportedAt); localStorage.setItem(EXP_KEY, String(isNaN(t) ? Date.now() : t)); } catch {}
+      writeLocal();
+      curId = null; rebuild();
+      closeModal(() => go("week", { week: latest() ? latest().id : null }));
+    });
+  });
+
+  // ---------- navigation (hash-based so the phone's back gesture works) ----------
+  let lastBase = null, pendingEdit = false;
+  function baseHash() { return location.hash.slice(1).replace(/-m$/, "") || "home"; }
+  function hashFor(v, weekId, si) {
+    if (v === "past") return "past";
+    if (v === "session") return "session-" + weekId + "-" + si;
+    return latest() && weekId === latest().id ? "home" : "week-" + weekId;
+  }
+  function go(v, opts = {}) {
+    const wid = "week" in opts ? opts.week : curId;
+    const si = "si" in opts ? opts.si : curSi;
+    const h = hashFor(v, wid, si);
+    if (baseHash() === h && !location.hash.endsWith("-m")) { lastBase = null; route(); return; }
+    location.hash = h;
+  }
+  function route() {
+    const h = baseHash();
+    let m;
+    if (h === "past") view = "past";
+    else if ((m = h.match(/^session-(.+)-(\d+)$/))) { view = "session"; curId = m[1]; curSi = +m[2]; }
+    else if ((m = h.match(/^week-(.+)$/))) { view = "week"; curId = m[1]; }
+    else { view = "week"; curId = latest() ? latest().id : null; }
+    if (!weeks.find((w) => w.id === curId)) { curId = latest() ? latest().id : null; if (view === "session") view = "week"; }
+    if (h !== lastBase) {
+      lastBase = h;
+      if (view === "session") { // keep ticked exercises grouped at the top
+        const w = cur(), s = curSession();
+        if (s) {
+          const sorted = [...s.exercises.filter((x) => x.done), ...s.exercises.filter((x) => !x.done)];
+          if (sorted.some((x, i) => x !== s.exercises[i])) { s.exercises = sorted; touch(w); }
+        }
+      }
+      editMode = pendingEdit; pendingEdit = false;
+      render();
+      window.scrollTo(0, 0);
+      const m = $("main");
+      m.classList.remove("enter"); void m.offsetWidth; m.classList.add("enter");
+      clearTimeout(route.t); route.t = setTimeout(() => m.classList.remove("enter"), 700);
+    }
+  }
+  window.addEventListener("hashchange", () => {
+    if (!location.hash.endsWith("-m") && $("modal").innerHTML) $("modal").innerHTML = "";
+    route();
+    if (pendingAfter) { const f = pendingAfter; pendingAfter = null; f(); }
+  });
+
+  // ---------- render ----------
+
+  function render() {
+    $("tabWeek").classList.toggle("on", view !== "past");
+    $("tabPast").classList.toggle("on", view === "past");
+    if (view === "past") return renderPast();
+    if (view === "session" && curSession()) return renderSession();
+    view = "week";
+    renderWeek();
+  }
+
+  function header(inner) { $("header").innerHTML = inner; showSaved(); }
+
+  function renderWeek() {
+    const w = cur();
+    if (!w) {
+      header(`<div class="h1">Gym</div><div class="h-sub"><span id="saved" class="saved"></span></div>`);
+      $("main").innerHTML = `<div class="section" style="margin-top:18px"><h3>Welcome</h3>
+        <p style="margin:0 2px 14px">Got a backup file? Import it to bring in all your weeks.</p>
+        <button class="primary" data-act="import">Import backup</button>
+        <button class="secondary" data-act="newweek" style="margin-top:10px">Start from scratch</button></div>`;
+      return;
+    }
+    const isLatest = w === latest();
+    header(`<div class="h1">Week ${esc(w.num ?? "")}</div>
+      <div class="h-sub"><span>${weekRange(w)}</span>${w.tag ? `<span class="tag">${esc(w.tag)}</span>` : ""}<span id="saved" class="saved"></span></div>`);
+    let h = "";
+    if (!isLatest) h += `<div class="banner"><span>You're looking at a past week.</span><button data-act="golatest">Back to this week</button></div>`;
+    else if (weeks.length > 1 && !w.sessions.some((x) => x.day || x.missed || x.exercises.some((e) => e.done)))
+      h += `<div class="banner"><span>Started this week by mistake?</span><button data-act="delweek">Delete it</button></div>`;
+    else h += `<p class="hint">Tap a session to log it.</p>`;
+    w.sessions.forEach((s, i) => {
+      const ex = named(s), d = ex.filter((e) => e.done).length;
+      let cls = "", stat;
+      if (s.missed) { cls = "missed"; stat = "Missed"; }
+      else if (s.day) { cls = "done"; stat = `Done ${DAY_FULL[s.day] || s.day} · ${d}/${ex.length} exercises`; }
+      else if (d) stat = `In progress · ${d}/${ex.length} exercises`;
+      else stat = `Not done yet · ${ex.length} exercises`;
+      h += `<button class="scard ${cls}" data-act="open" data-si="${i}"><span class="sdot"></span><span class="sinfo"><div class="sname">${esc(sessionName(s, i))}</div><div class="sstat">${stat}</div></span><span class="chev">›</span></button>`;
+    });
+    if (isLatest) {
+      h += `<div class="section"><h3>Finished this week?</h3><button class="primary" data-act="newweek">Start Week ${esc((w.num ?? 0) + 1)}</button>
+        <p>Copies this week's exercises and weights into a new week, so you only change what's different.</p></div>`;
+    }
+    h += `<div style="display:flex;justify-content:center;gap:8px;margin-top:8px"><button class="linkbtn" style="margin:0" data-act="weekmenu">Week settings</button><button class="linkbtn" style="margin:0;color:var(--accent)" data-act="delweek">Delete this week</button></div>`;
+    $("main").innerHTML = h;
+  }
+
+  function renderSession() {
+    const w = cur(), s = curSession(), si = curSi;
+    header(`<button class="back" data-act="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Week ${esc(w.num ?? "")}</button>
+      <div class="h1" style="font-size:21px">${esc(sessionName(s, si))}</div>
+      <div class="h-sub"><span>${weekRange(w)}</span><span id="saved" class="saved"></span></div>`);
+    let h = "";
+    if (editMode) {
+      h += `<div class="label">Session name</div><input class="ein name" data-f="label" value="${esc(s.label)}" placeholder="e.g. Chest, Shoulder, Arms">`;
+      s.exercises.forEach((e, ei) => {
+        h += `<div class="ex" data-ei="${ei}"><div class="erow" style="margin:0;flex-wrap:nowrap"><input class="ein name" data-f="name" value="${esc(e.name)}" placeholder="Exercise name">
+            <button class="ebtn" data-act="up" aria-label="Move up" ${ei === 0 ? "disabled" : ""}>↑</button><button class="ebtn" data-act="down" aria-label="Move down" ${ei === s.exercises.length - 1 ? "disabled" : ""}>↓</button></div>
+          <div class="erow" style="align-items:center"><span style="color:var(--muted);font-size:14px;margin-right:2px">Sets</span><button class="ebtn" data-act="delset" aria-label="Remove a set" ${e.sets.length ? "" : "disabled"}>−</button><b style="min-width:18px;text-align:center">${e.sets.length}</b><button class="ebtn" data-act="addset" aria-label="Add a set">+</button>
+            <button class="ebtn danger" data-act="delex" style="margin-left:auto">Remove</button></div>
+          <div class="erow"><input class="ein" data-f="enote" value="${esc(e.note)}" placeholder="Note (optional)"></div></div>`;
+      });
+      h += `<button class="addbtn" data-act="pick">+ Add exercise</button>`;
+      h += `<button class="primary" data-act="finishedit" style="margin-top:12px">Done editing</button>`;
+      h += `<button class="linkbtn" data-act="delsession" style="color:var(--accent)">Delete this session</button>`;
+      $("main").innerHTML = h;
+      return;
+    }
+    if (s.missed) h += `<div class="banner"><span>Marked as missed.</span><button data-act="unmiss">Undo</button></div>`;
+    h += `<div class="label">Trained on</div><div class="days compact">` +
+      DAYS.map((d) => `<button class="chip${s.day === d && !s.missed ? " on" : ""}" data-act="day" data-day="${d}">${d}</button>`).join("") + `</div>`;
+    h += `<p class="hint" style="margin-top:12px">Tap a number to edit it, or hold and drag.</p>`;
+    const named = s.exercises.filter((x) => x.name.trim()), ndone = named.filter((x) => x.done).length;
+    if (named.length) h += `<div class="progress${ndone === named.length ? " full" : ""}"><div class="pt"><span>${ndone === named.length ? "Session complete" : "Progress"}</span><span>${ndone} of ${named.length} done</span></div>${waveSVG(ndone / named.length, ndone === named.length)}</div>`;
+    const best = bestBefore(w);
+    h += `<div class="exlist">`;
+    s.exercises.forEach((e, ei) => {
+      h += `<div class="exr${e.done ? " done" : ""}" data-ei="${ei}">
+        <div class="exr-top"><span class="grip" aria-label="Drag to reorder"><svg viewBox="0 0 12 18" fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg></span><button class="exr-name" data-act="exmenu"><span class="nm">${esc(e.name || "Untitled")}</span><span class="dots">⋯</span></button>
+        <button class="tick" data-act="tick" aria-label="Mark ${esc(e.name)} done"><svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></button></div>
+        ${e.note ? `<div class="exnote">${esc(e.note)}</div>` : ""}
+        <div class="cells">${e.sets.map((x, k) => { const pr = isPR(e, x, best); return `<div class="cell${pr ? " pr" : ""}">${pr ? `<span class="prb">PR</span>` : ""}${half(x.w, "w", k)}${half(x.r, "r", k)}</div>`; }).join("")}<button class="addcell" data-act="addset" aria-label="Add a set">+</button></div></div>`;
+    });
+    if (!s.exercises.length) h += `<div class="empty">No exercises yet.</div>`;
+    h += `</div>`;
+    h += `<button class="addbtn" data-act="pick">+ Add exercise</button>`;
+    h += `<button class="secondary" data-act="edit" style="margin-top:18px">Edit exercises</button>`;
+    if (!s.missed) h += `<button class="linkbtn" data-act="miss">Mark this session as missed</button>`;
+    $("main").innerHTML = h;
+  }
+
+  // Heaviest weight per exercise from completed sessions in earlier weeks
+  function bestBefore(week) {
+    const m = new Map();
+    for (const w of weeks) {
+      if (w.start >= week.start) continue;
+      for (const s of w.sessions) if (sessionDone(s)) for (const e of s.exercises) for (const x of e.sets || []) {
+        const v = num(x.w); if (isNaN(v)) continue;
+        const k = key(e.name); if (!m.has(k) || v > m.get(k)) m.set(k, v);
+      }
+    }
+    return m;
+  }
+  function isPR(e, x, best) { const v = num(x.w), b = best.get(key(e.name)); return !isNaN(v) && b != null && v > b && !!x.r; }
+
+  // Done exercises sit at the top, in the order they were ticked
+  function placeAfterTick(s, e) {
+    // Ticked: goes to the end of the done group. Unticked: goes to the top of the to-do group.
+    const rest = s.exercises.filter((x) => x !== e);
+    s.exercises = [...rest.filter((x) => x.done), e, ...rest.filter((x) => !x.done)];
+  }
+  function rowRects() {
+    const m = new Map(), s = curSession();
+    if (!s) return m;
+    $("main").querySelectorAll(".exr").forEach((el) => { const e = s.exercises[+el.dataset.ei]; if (e) m.set(e, el.getBoundingClientRect().top); });
+    return m;
+  }
+  function flip(before) {
+    const s = curSession();
+    if (!s) return;
+    $("main").querySelectorAll(".exr").forEach((el) => {
+      const e = s.exercises[+el.dataset.ei], old = before.get(e);
+      if (old == null) return;
+      const dy = old - el.getBoundingClientRect().top;
+      if (Math.abs(dy) > 1) el.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 320, easing: "cubic-bezier(.2,.8,.2,1)" });
+    });
+  }
+  function confetti() {
+    const colors = ["#6750a4", "#d0bcff", "#7d5260", "#ffd8e4", "#1f7a43", "#c4eed0"];
+    const cx = innerWidth / 2, cy = innerHeight * 0.35;
+    for (let i = 0; i < 36; i++) {
+      const d = document.createElement("div");
+      d.className = "confetti";
+      d.style.background = colors[i % colors.length];
+      d.style.left = cx + "px"; d.style.top = cy + "px";
+      document.body.appendChild(d);
+      const a = Math.random() * Math.PI * 2, v = 120 + Math.random() * 220;
+      const dx = Math.cos(a) * v, dy = Math.sin(a) * v - 160, rot = (Math.random() - .5) * 720;
+      d.animate([{ transform: "translate(-50%,-50%) rotate(0)", opacity: 1 }, { transform: `translate(${dx}px, ${dy + 420}px) rotate(${rot}deg)`, opacity: 0 }],
+        { duration: 1100 + Math.random() * 500, easing: "cubic-bezier(.15,.6,.4,1)" }).onfinish = () => d.remove();
+    }
+  }
+
+  // Material 3 Expressive wavy progress indicator
+  function waveSVG(frac, full) {
+    const W = 300, mid = 7, wl = 24, amp = full ? 0 : 3.2, end = Math.round(Math.max(0, Math.min(1, frac)) * W);
+    let d = `M0 ${mid}`, up = true;
+    for (let x = 0; x < end + wl; x += wl / 2) { d += ` Q${x + wl / 4} ${up ? mid - amp * 2 : mid + amp * 2} ${x + wl / 2} ${mid}`; up = !up; }
+    const ts = end > 0 ? end + 10 : 0;
+    return `<svg class="wave" viewBox="0 0 ${W} 14" preserveAspectRatio="none" aria-hidden="true"><defs><clipPath id="wclip"><rect x="-4" y="-6" width="${end + 4}" height="26"/></clipPath></defs>` +
+      (ts < W - 4 ? `<line class="track" x1="${ts}" y1="${mid}" x2="${W - 2}" y2="${mid}" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` : "") +
+      (end > 0 ? `<g clip-path="url(#wclip)"><path class="act${full ? "" : " wv"}" d="${d}" fill="none" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>` : "") + `</svg>`;
+  }
+
+  function halfText(v, f) { const t = String(v ?? ""); return t ? (f === "r" ? "×" + t : t) : "–"; }
+  function half(v, f, k) {
+    const t = String(v ?? "");
+    return `<button class="half ${f === "w" ? "hw" : "hr"}${t ? "" : " empty"}${t.length > 4 ? " long" : ""}" data-act="val" data-f="${f}" data-k="${k}" aria-label="Set ${k + 1} ${f === "w" ? "weight" : "reps"}">${esc(halfText(v, f))}</button>`;
+  }
+  function vbox(v, f, k) {
+    const t = String(v ?? "");
+    return `<td><button class="vbox${t ? "" : " empty"}${t.length > 4 ? " small" : ""}" data-act="val" data-f="${f}" data-k="${k}" aria-label="Set ${k + 1} ${f === "w" ? "weight" : "reps"}">${t ? esc(t) : "–"}</button></td>`;
+  }
+
+  function renderPast() {
+    header(`<div class="h1">Past weeks</div><div class="h-sub"><span>${weeks.length} weeks logged</span><span id="saved" class="saved"></span></div>`);
+    let h = "", year = null;
+    for (const w of weeks.slice().reverse()) {
+      const y = w.start.slice(0, 4);
+      if (y !== year) { if (year) h += `</div>`; h += `<div class="yearhead">${y}</div><div class="wlist">`; year = y; }
+      const d = w.sessions.filter(sessionDone).length;
+      h += `<button class="wrow" data-act="openweek" data-id="${esc(w.id)}"><span class="n">Week ${esc(w.num ?? "?")}</span><span class="d">${fmtDate(w.start)}${w.tag ? " · " + esc(w.tag) : ""}</span><span class="c">${d}/${w.sessions.length} done</span></button>`;
+    }
+    if (year) h += `</div>`;
+    if (!h) h = `<div class="empty">Nothing logged yet.</div>`;
+    const lastExp = +(lsGet(EXP_KEY) || 0);
+    const days = lastExp ? Math.floor((Date.now() - lastExp) / 864e5) : null;
+    const lastTxt = lastExp ? (days === 0 ? "today" : days === 1 ? "yesterday" : days + " days ago") : "never";
+    const stale = !lastExp || days > 30;
+    h = `<div class="section" style="margin-top:16px"><h3>Backup</h3>
+      <div class="backup"><div class="bl">Your data is only saved on this phone.<br><span${stale ? ' style="color:var(--accent)"' : ""}>Last backup: ${lastTxt}</span></div>
+      <div class="bb"><button class="ebtn" data-act="export">Export</button><button class="ebtn" data-act="import">Import</button></div></div></div>` + h +
+      `<p class="hint" style="text-align:center;margin-top:24px">Gym Tracker · app version ${APP_VERSION}</p>`;
+    $("main").innerHTML = h;
+  }
+
+  // ---------- sheets ----------
+  function showSheet(html, cls = "") {
+    const m = $("modal");
+    m.innerHTML = `<div class="scrim"><div class="sheet ${cls}" role="dialog">${html}</div></div>`;
+    if (!location.hash.endsWith("-m")) location.hash = baseHash() + "-m";
+    return m.firstChild;
+  }
+  function openModal(html, onClick) {
+    const scrim = showSheet(html);
+    scrim.addEventListener("click", (ev) => {
+      if (ev.target === scrim) return closeModal();
+      const b = ev.target.closest("[data-m]");
+      if (b) onClick && onClick(b.dataset.m);
+    });
+  }
+  let pendingAfter = null;
+  function closeModal(after) {
+    if (location.hash.endsWith("-m")) {
+      pendingAfter = after || null;
+      history.back();
+      // If the frame's history can't go back, close it anyway
+      setTimeout(() => { if (location.hash.endsWith("-m")) { location.replace("#" + baseHash()); } }, 400);
+    } else {
+      $("modal").innerHTML = "";
+      after && after();
+    }
+  }
+
+  function showHistory(name) {
+    const hist = historyFor(name);
+    let h = `<h2>${esc(name)}</h2>`;
+    if (!hist.length) return openModal(h + `<div class="meta">Nothing logged for this exercise yet.</div><div class="actions"><button data-m="close">Close</button></div>`, closeModal);
+    const pts = hist.slice(0, 40).reverse().map((x) => Math.max(...x.sets.map((s) => num(s.w)).filter((v) => !isNaN(v)))).filter((v) => isFinite(v));
+    let best = null;
+    for (const x of hist) for (const s of x.sets) {
+      const wv = num(s.w), rv = num(s.r);
+      if (!isNaN(wv) && (!best || wv > best.w || (wv === best.w && rv > best.r))) best = { w: wv, r: rv, date: x.week.start };
+    }
+    h += `<div class="meta">Logged ${hist.length} times since ${fmtDate(hist[hist.length - 1].week.start, true)}</div>`;
+    h += `<div class="best"><div><b>${esc(hist[0].sets.map(setText).join(", "))}</b><span>Last time · ${fmtDate(hist[0].week.start)}</span></div>`;
+    if (best) h += `<div><b>${best.w}${isNaN(best.r) ? "" : " × " + best.r}</b><span>Heaviest · ${fmtDate(best.date)}</span></div>`;
+    h += `</div>`;
+    if (pts.length > 1) {
+      const W = 320, H = 90, p = 8, mn = Math.min(...pts), mx = Math.max(...pts), rng = mx - mn || 1;
+      const xy = pts.map((v, k) => [p + (k * (W - 2 * p)) / (pts.length - 1), H - p - ((v - mn) / rng) * (H - 2 * p)]);
+      h += `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polyline fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke" points="${xy.map((q) => q.join(",")).join(" ")}"/></svg>`;
+      h += `<div class="meta" style="margin-top:0">Heaviest weight each time (last ${pts.length}): ${mn} to ${mx}</div>`;
+    }
+    for (const x of hist) {
+      h += `<div class="hrow"><div class="hd">${fmtDate(x.week.start)} · Week ${esc(x.week.num ?? "?")}${x.session.day ? " · " + DAY_FULL[x.session.day] : ""}</div>
+        <div class="hs">${esc(x.sets.map(setText).join(",  "))}</div>${x.ex.note ? `<div class="hd" style="margin:3px 0 0">${esc(x.ex.note)}</div>` : ""}</div>`;
+    }
+    h += `<div class="actions"><button data-m="close">Close</button></div>`;
+    openModal(h, closeModal);
+  }
+
+  function weekMenu() {
+    const w = cur();
+    openModal(`<h2>Week ${esc(w.num ?? "")} settings</h2><div class="menu">
+      <button data-m="settings">Change week number, date or label</button>
+      <button data-m="addsession">Add a session</button>
+      <button data-m="copy">Copy week to paste into Google Sheets</button>
+      <button class="danger" data-m="delweek">Delete this week</button></div>
+      <div class="actions"><button data-m="close">Close</button></div>`, (a) => {
+      if (a === "close") closeModal();
+      if (a === "settings") weekSettings(w);
+      if (a === "addsession") {
+        w.sessions.push({ day: "", missed: false, label: "", note: "", exercises: [] });
+        touch(w); rebuild();
+        closeModal(() => { pendingEdit = true; go("session", { si: w.sessions.length - 1 }); });
+      }
+      if (a === "copy") copyWeek(w);
+      if (a === "delweek") confirmDelete(w);
+    });
+  }
+  function weekSettings(w) {
+    openModal(`<h2>Week settings</h2>
+      <div class="row2"><div><label>Week number</label><input type="number" id="f-num" value="${esc(w.num ?? "")}"></div>
+      <div><label>Week starting</label><input type="date" id="f-start" value="${esc(w.start)}"></div></div>
+      <label>Label (e.g. Cut, Rehab, Deload)</label><input type="text" id="f-tag" value="${esc(w.tag)}" placeholder="Optional">
+      <div class="actions"><button data-m="cancel">Cancel</button><button class="go" data-m="save">Save</button></div>`, (a) => {
+      if (a === "cancel") return closeModal();
+      const n = parseInt($("f-num").value, 10), st = $("f-start").value;
+      w.num = isNaN(n) ? null : n;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(st)) w.start = st;
+      w.tag = $("f-tag").value.trim();
+      touch(w); closeModal(); rebuild(); render();
+    });
+  }
+  function confirmDelete(w) {
+    openModal(`<h2>Delete Week ${esc(w.num ?? "")}?</h2><div class="meta">This removes the whole week and everything logged in it.</div>
+      <div class="actions"><button data-m="cancel">Cancel</button><button class="danger" data-m="del">Delete</button></div>`, (a) => {
+      if (a === "cancel") return closeModal();
+      touch({ id: w.id, deleted: true, start: w.start });
+      rebuild(); closeModal(() => go("week", { week: latest() ? latest().id : null }));
+    });
+  }
+  async function copyWeek(w) {
+    const rows = [];
+    for (const s of w.sessions) {
+      rows.push([s.missed ? "Missed" : (DAY_FULL[s.day] || ""), s.label].join("\t"));
+      for (const e of s.exercises) rows.push([e.name, ...e.sets.map((x) => x.w + "/" + x.r), e.done ? "x" : "-"].join("\t"));
+    }
+    const text = rows.join("\n");
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch {}
+    openModal(`<h2>${ok ? "Copied" : "Copy this"}</h2><div class="meta">${ok ? "Paste it into a blank tab in your sheet." : "Select and copy the text below."}</div>
+      ${ok ? "" : `<textarea style="width:100%;height:200px;background:var(--field);color:var(--ink);border:0;border-radius:8px;padding:8px">${esc(text)}</textarea>`}
+      <div class="actions"><button data-m="close">Close</button></div>`, closeModal);
+  }
+
+  function confirmNewWeek() {
+    const last = latest();
+    if (!last) return newWeek();
+    openModal(`<h2>Start Week ${esc((last.num ?? 0) + 1)}?</h2>
+      <div class="meta">This makes a new week with the same sessions, exercises and weights as Week ${esc(last.num ?? "")}. You can delete it afterwards if you change your mind.</div>
+      <div class="actions"><button data-m="cancel">Cancel</button><button class="go" data-m="start">Start week</button></div>`, (a) => {
+      if (a === "cancel") return closeModal();
+      closeModal(() => newWeek());
+    });
+  }
+
+  function newWeek() {
+    const last = latest();
+    const thisMon = mondayOf(new Date());
+    let start = thisMon;
+    if (last) { const nextMon = parseDate(last.start); nextMon.setDate(nextMon.getDate() + 7); start = thisMon > nextMon ? thisMon : nextMon; }
+    const w = {
+      id: "w" + iso(start) + "-" + uid(),
+      num: last && last.num != null ? last.num + 1 : 1,
+      start: iso(start), tag: "",
+      sessions: last ? clone(last.sessions).map((s) => ({ ...s, day: "", missed: false, note: "", exercises: s.exercises.map((e) => ({ ...e, done: false, note: "" })) })) : [],
+    };
+    touch(w); rebuild(); go("week", { week: w.id });
+  }
+
+  // ---------- events ----------
+  document.body.addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-act]");
+    if (!b || $("modal").contains(b)) return;
+    if (b.classList.contains("half") && Date.now() - suppressClick < 600) return;
+    const act = b.dataset.act;
+    const w = cur(), s = curSession();
+    const exel = b.closest("[data-ei]");
+    const e = s && exel ? s.exercises[+exel.dataset.ei] : null;
+    switch (act) {
+      case "newweek": return confirmNewWeek();
+      case "export": return exportBackup();
+      case "import": return importInput.click();
+      case "delweek": return confirmDelete(w);
+      case "golatest": return go("week", { week: latest().id });
+      case "open": return go("session", { si: +b.dataset.si });
+      case "openweek": return go("week", { week: b.dataset.id });
+      case "back": return go("week");
+      case "weekmenu": return weekMenu();
+      case "history": return showHistory(e.name);
+      case "val": return openValSheet(+exel.dataset.ei, +b.dataset.k, b.dataset.f);
+      case "exmenu": return exerciseMenu(+exel.dataset.ei);
+      case "edit": editMode = true; render(); window.scrollTo(0, 0); return;
+      case "finishedit": editMode = false; render(); window.scrollTo(0, 0); return;
+      case "day": if (s.day === b.dataset.day) s.day = ""; else { s.day = b.dataset.day; s.missed = false; } break;
+      case "miss": s.missed = true; s.day = ""; break;
+      case "unmiss": s.missed = false; break;
+      case "tick": {
+        const before = rowRects();
+        e.done = !e.done;
+        if (e.done && !s.day && !s.missed) { // first tick: assume they're training today
+          const t = new Date(), mon = parseDate(w.start), diff = Math.floor((t - mon) / 864e5);
+          if (diff >= 0 && diff < 7) s.day = DAYS[(t.getDay() + 6) % 7];
+        }
+        placeAfterTick(s, e);
+        touch(w); render(); flip(before);
+        buzz(e.done ? 15 : 6);
+        if (e.done) {
+          const row = $("main").querySelector(`.exr[data-ei="${s.exercises.indexOf(e)}"]`);
+          row && row.classList.add("justdone");
+          const named = s.exercises.filter((x) => x.name.trim());
+          if (named.length && named.every((x) => x.done)) { confetti(); buzz([20, 60, 20, 60, 40]); }
+        }
+        return;
+      }
+      case "addset": { const l = e.sets[e.sets.length - 1]; e.sets.push(l ? { ...l } : { w: "", r: "" }); break; }
+      case "delset": e.sets.pop(); break;
+      case "pick": return openPicker();
+      case "rmex": return confirmRemove(e);
+      case "delex": return confirmRemove(e);
+      case "up": { const i = s.exercises.indexOf(e); if (i > 0) [s.exercises[i - 1], s.exercises[i]] = [s.exercises[i], s.exercises[i - 1]]; break; }
+      case "down": { const i = s.exercises.indexOf(e); if (i < s.exercises.length - 1) [s.exercises[i + 1], s.exercises[i]] = [s.exercises[i], s.exercises[i + 1]]; break; }
+      case "delsession": w.sessions.splice(curSi, 1); touch(w); return go("week");
+      default: return;
+    }
+    touch(w); render();
+  });
+
+  $("main").addEventListener("input", (ev) => {
+    const el = ev.target, f = el.dataset.f;
+    if (!f) return;
+    const w = cur(), s = curSession();
+    if (!w || !s) return;
+    const exel = el.closest("[data-ei]");
+    const e = exel ? s.exercises[+exel.dataset.ei] : null;
+    const v = el.value;
+    if (f === "name") e.name = v;
+    else if (f === "enote") e.note = v;
+    else if (f === "label") s.label = v;
+    touch(w);
+  });
+  $("main").addEventListener("keydown", (ev) => { if (ev.key === "Enter" && ev.target.matches("input")) { ev.preventDefault(); ev.target.blur(); } });
+
+  // ---------- drag rows to reorder ----------
+  let drag = null;
+  $("main").addEventListener("pointerdown", (ev) => {
+    const g = ev.target.closest(".grip");
+    if (!g || drag || scrub) return;
+    const s = curSession(), row = g.closest(".exr");
+    if (!s || !row) return;
+    ev.preventDefault();
+    const rows = [...$("main").querySelectorAll(".exr")];
+    const from = rows.indexOf(row);
+    const e = s.exercises[+row.dataset.ei];
+    const doneCount = s.exercises.filter((x) => x.done).length;
+    // Ticked rows stay within the ticked group; unticked rows within the unticked group
+    const lo = e.done ? 0 : doneCount, hi = e.done ? doneCount - 1 : rows.length - 1;
+    const pos = rows.map((r) => { const b = r.getBoundingClientRect(); return { top: b.top + scrollY, h: b.height }; });
+    drag = { row, rows, from, to: from, lo, hi, pos, startY: ev.clientY + scrollY, pointerId: ev.pointerId, y: ev.clientY };
+    g.setPointerCapture(ev.pointerId);
+    row.closest(".exlist").classList.add("sorting");
+    row.classList.add("dragging");
+    buzz(10);
+    drag.raf = requestAnimationFrame(dragTick);
+  });
+  function dragLayout() {
+    const d = drag, dy = d.y + scrollY - d.startY;
+    d.row.style.transform = `translateY(${dy}px) scale(1.02)`;
+    const center = d.pos[d.from].top + d.pos[d.from].h / 2 + dy;
+    let to = d.from;
+    for (let j = 0; j < d.rows.length; j++) {
+      if (j === d.from) continue;
+      const mid = d.pos[j].top + d.pos[j].h / 2;
+      if (j > d.from && center > mid) to = j;
+      if (j < d.from && center < mid && to >= d.from) to = j;
+    }
+    to = Math.max(d.lo, Math.min(d.hi, to));
+    if (to !== d.to) { d.to = to; buzz(4); }
+    const h = d.pos[d.from].h;
+    d.rows.forEach((r, j) => {
+      if (j === d.from) return;
+      let shift = 0;
+      if (d.from < to && j > d.from && j <= to) shift = -h;
+      if (to < d.from && j >= to && j < d.from) shift = h;
+      r.style.transform = shift ? `translateY(${shift}px)` : "";
+    });
+  }
+  function dragTick() {
+    if (!drag) return;
+    const edge = 90, y = drag.y;
+    if (y < edge) scrollBy(0, -Math.ceil((edge - y) / 6));
+    else if (y > innerHeight - edge - 70) scrollBy(0, Math.ceil((y - (innerHeight - edge - 70)) / 6));
+    dragLayout();
+    drag.raf = requestAnimationFrame(dragTick);
+  }
+  $("main").addEventListener("pointermove", (ev) => { if (drag && ev.pointerId === drag.pointerId) { drag.y = ev.clientY; } });
+  function dragEnd(ev) {
+    if (!drag || (ev && ev.pointerId !== drag.pointerId)) return;
+    const d = drag; drag = null;
+    cancelAnimationFrame(d.raf);
+    const before = rowRects();
+    d.rows.forEach((r) => { r.style.transform = ""; });
+    d.row.closest(".exlist").classList.remove("sorting");
+    d.row.classList.remove("dragging");
+    const w = cur(), s = curSession();
+    if (d.to !== d.from) {
+      const [moved] = s.exercises.splice(d.from, 1);
+      s.exercises.splice(d.to, 0, moved);
+      touch(w);
+    }
+    render(); flip(before);
+  }
+  $("main").addEventListener("pointerup", dragEnd);
+  $("main").addEventListener("pointercancel", dragEnd);
+
+  // ---------- hold-and-drag on a number ----------
+  const HOLD = 160, STEP = 14;
+  let scrub = null, suppressClick = 0;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  document.body.appendChild(bubble);
+  function scrubStart(el, x, y) {
+    const exel = el.closest("[data-ei]");
+    if (!exel || !curSession()) return;
+    scrub = { el, x, y, ei: +exel.dataset.ei, k: +el.dataset.k, f: el.dataset.f, active: false };
+    scrub.timer = setTimeout(scrubActivate, HOLD);
+  }
+  function scrubActivate() {
+    if (!scrub) return;
+    const e = curSession().exercises[scrub.ei], cv = e.sets[scrub.k][scrub.f] || "";
+    let base = cv;
+    if (!cv) { const prev = e.sets.slice(0, scrub.k).reverse().find((x) => x[scrub.f]); if (prev) base = prev[scrub.f]; }
+    scrub.vals = wheelValues(scrub.f, base);
+    scrub.start = scrub.idx = Math.max(0, scrub.vals.indexOf(base));
+    scrub.val = cv; scrub.moved = false; scrub.active = true;
+    scrub.el.classList.add("scrub");
+    buzz(12);
+    showBubble();
+  }
+  function showBubble() {
+    const r = scrub.el.closest(".cell").getBoundingClientRect();
+    bubble.textContent = (scrub.val === "" ? "–" : scrub.val) + (scrub.f === "w" ? " kg" : " reps");
+    bubble.style.left = r.left + r.width / 2 + "px";
+    bubble.style.top = r.top - 10 + "px";
+    bubble.classList.add("on");
+  }
+  function scrubMove(x, y, ev) {
+    if (!scrub) return;
+    if (!scrub.active) {
+      if (Math.abs(y - scrub.y) > 8 || Math.abs(x - scrub.x) > 8) { clearTimeout(scrub.timer); scrub = null; }
+      return;
+    }
+    if (ev.cancelable) ev.preventDefault();
+    const i = Math.min(scrub.vals.length - 1, Math.max(0, scrub.start + Math.round((scrub.y - y) / STEP)));
+    if (i !== scrub.idx) {
+      scrub.idx = i; scrub.val = scrub.vals[i]; scrub.moved = true;
+      scrub.el.textContent = halfText(scrub.val, scrub.f);
+      buzz(3);
+      showBubble();
+    }
+  }
+  function scrubEnd() {
+    if (!scrub) return;
+    clearTimeout(scrub.timer);
+    const sc = scrub;
+    scrub = null;
+    if (!sc.active) return;
+    suppressClick = Date.now();
+    bubble.classList.remove("on");
+    sc.el.classList.remove("scrub");
+    const w = cur(), set = curSession().exercises[sc.ei].sets[sc.k];
+    if (sc.moved && set[sc.f] !== sc.val) { set[sc.f] = sc.val; touch(w); }
+    if (deferredRender) { deferredRender = false; rebuild(); }
+    render();
+    if (!sc.moved) openValSheet(sc.ei, sc.k, sc.f); // held without dragging: open the wheels
+  }
+  $("main").addEventListener("touchstart", (ev) => {
+    const el = ev.target.closest(".half");
+    if (!el || ev.touches.length > 1) return;
+    scrubStart(el, ev.touches[0].clientX, ev.touches[0].clientY);
+  }, { passive: true });
+  document.addEventListener("touchmove", (ev) => { if (scrub) scrubMove(ev.touches[0].clientX, ev.touches[0].clientY, ev); }, { passive: false });
+  document.addEventListener("touchend", scrubEnd);
+  document.addEventListener("touchcancel", scrubEnd);
+  $("main").addEventListener("mousedown", (ev) => {
+    const el = ev.target.closest(".half");
+    if (!el || ev.button !== 0 || scrub) return;
+    scrubStart(el, ev.clientX, ev.clientY);
+  });
+  document.addEventListener("mousemove", (ev) => { if (scrub) scrubMove(ev.clientX, ev.clientY, ev); });
+  document.addEventListener("mouseup", scrubEnd);
+  $("main").addEventListener("contextmenu", (ev) => { if (ev.target.closest(".half")) ev.preventDefault(); });
+
+  $("tabWeek").onclick = () => go("week", { week: latest() ? latest().id : null });
+  $("tabPast").onclick = () => go("past");
+
+  // ---------- start ----------
+  async function boot() {
+    overrides = loadLocal();
+    loadCustom();
+    rebuild();
+    if (location.hash.endsWith("-m")) location.replace("#" + baseHash());
+    dbState = "local";
+    route();
+    try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.warn("offline support unavailable", e));
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
