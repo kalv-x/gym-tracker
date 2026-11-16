@@ -734,7 +734,12 @@
       input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); input.blur(); } });
     }
     $("seg-one").onclick = () => { all = false; st.w.touched = st.r.touched = false; load(); };
-    $("seg-all").onclick = () => { all = true; st.w.touched = st.r.touched = false; load(); };
+    // Switching to All sets carries over anything you just changed for this set to every set
+    $("seg-all").onclick = () => {
+      all = true;
+      for (const f2 of ["w", "r"]) { clearTimeout(st[f2].t); if (st[f2].touched) commit(f2, $("in-" + f2).value.trim()); }
+      load();
+    };
     $("v-prev").onclick = () => {
       if (all) { const eo = exOrder(), p = eo.indexOf(ei); if (p > 0) { ei = eo[p - 1]; k = 0; } }
       else { const o = order(), p = o.findIndex(([a, b]) => a === ei && b === k); if (p > 0) [ei, k] = o[p - 1]; }
@@ -844,7 +849,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.8"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.9"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
