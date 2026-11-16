@@ -103,7 +103,8 @@
 
   /* Day picker: connected button group */
   .label { font-size: 14px; font-weight: 500; color: var(--on-surface-variant); margin: 8px 4px 8px; }
-  .gymbar + .label { margin-top: 14px; }
+  .gymbar { margin-top: 10px; }
+  .daysrow { margin-top: 8px; }
   .days { display: flex; gap: 2px; }
   .chip { flex: 1 1 0; min-width: 0; height: 48px; font-size: 14px; font-weight: 500; background: var(--surface-highest); color: var(--on-surface-variant); border-radius: 8px; transition: border-radius .35s var(--spring), background .2s, color .2s; }
   .chip:first-child { border-radius: 24px 8px 8px 24px; }
@@ -437,7 +438,7 @@
     if (dbState === "live") return ["Saved", false];
     if (dbState === "connecting") return ["", false];
     if (storageError) return ["Couldn't save — phone storage full?", true];
-    if (dbState === "local") return [saveTimer ? "Saving…" : "Saved", false];
+    if (dbState === "local") return ["", false];
     return ["Not synced — saved on this device", true];
   }
   function showSaved() { const el = $("saved"); if (!el) return; const [t, warn] = savedText(); el.textContent = t; el.classList.toggle("warn", warn); }
@@ -846,7 +847,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.11"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.12"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -916,7 +917,7 @@
   setTimeout(checkForUpdate, 2500);
 
   // ---------- navigation (hash-based so the phone's back gesture works) ----------
-  let lastBase = null, pendingEdit = false;
+  let lastBase = null, pendingEdit = false, slideFrom = 0;
   function baseHash() { return location.hash.slice(1).replace(/-m$/, "") || "home"; }
   function hashFor(v, weekId, si) {
     if (v === "past") return "past";
@@ -928,7 +929,7 @@
     const si = "si" in opts ? opts.si : curSi;
     const h = hashFor(v, wid, si);
     if (baseHash() === h && !location.hash.endsWith("-m")) { lastBase = null; route(); return; }
-    location.hash = h;
+    if (opts.replace) location.replace("#" + h); else location.hash = h;
   }
   function route() {
     const h = baseHash();
@@ -944,6 +945,13 @@
       render();
       window.scrollTo(0, 0);
       const m = $("main");
+      m.style.transform = ""; m.style.opacity = "";
+      if (slideFrom) { // arrived by swiping: slide the new week in from the side
+        const dir = slideFrom; slideFrom = 0;
+        m.animate([{ transform: `translateX(${dir * 36}%)`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 380, easing: "cubic-bezier(.2,.9,.25,1)" });
+        $("header").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250 });
+        return;
+      }
       m.classList.remove("enter"); void m.offsetWidth; m.classList.add("enter");
       clearTimeout(route.t); route.t = setTimeout(() => m.classList.remove("enter"), 700);
     }
@@ -981,26 +989,27 @@
     header(`<div class="h1">Week ${esc(w.num ?? "")}</div>
       <div class="h-sub"><span>${weekRange(w)}</span>${w.tag ? `<span class="tag">${esc(w.tag)}</span>` : ""}<span id="saved" class="saved"></span></div>`);
     let h = "";
-    if (!isLatest) h += `<div class="banner"><span>You're looking at a past week.</span><button data-act="golatest">Back to this week</button></div>`;
-    else if (weeks.length > 1 && !w.sessions.some((x) => x.day || x.missed || x.exercises.some((e) => e.done)))
+    if (isLatest && weeks.length > 1 && !w.sessions.some((x) => x.day || x.missed || x.exercises.some((e) => e.done)))
       h += `<div class="banner"><span>Started this week by mistake?</span><button data-act="delweek">Delete it</button></div>`;
-    else h += `<p class="hint">Tap a session to log it.</p>`;
     h += `<div class="slist">`;
     sessDisplay(w).forEach((i) => {
       const s = w.sessions[i], ex = named(s), d = ex.filter((e) => e.done).length;
       let cls = "", stat;
       if (s.missed) { cls = "missed"; stat = "Missed"; }
-      else if (s.day) { cls = "done"; stat = `Done ${DAY_FULL[s.day] || s.day} · ${d}/${ex.length} exercises`; }
-      else if (d) stat = `In progress · ${d}/${ex.length} exercises`;
-      else stat = `Not done yet · ${ex.length} exercises`;
+      else if (s.day) {
+        cls = "done";
+        const dt = parseDate(w.start); dt.setDate(dt.getDate() + Math.max(0, DAYS.indexOf(s.day)));
+        stat = `${DAY_FULL[s.day] || s.day} ${fmtDate(dt)} · ${d}/${ex.length} exercises`;
+      }
+      else if (d) stat = `${d}/${ex.length} exercises`;
+      else stat = `${ex.length} exercises`;
       const pct = ex.length ? Math.round((d / ex.length) * 100) : 0;
       h += `<button class="scard ${cls}" data-act="open" data-si="${i}"><span class="sdot" style="--p:${pct}%"></span><span class="sinfo"><div class="sname">${esc(sessionName(s, i))}</div><div class="sstat">${stat}</div>${s.gym ? `<div class="sgym">${PIN}${esc(s.gym)}</div>` : ""}</span><span class="chev">›</span></button>`;
     });
     h += `</div>`;
-    if (isLatest) {
-      h += `<div class="section"><h3>Finished this week?</h3><button class="primary" data-act="newweek">Start Week ${esc((w.num ?? 0) + 1)}</button>
-        <p>Copies this week's exercises and weights into a new week, so you only change what's different.</p></div>`;
-    }
+    h += isLatest
+      ? `<div class="section"><button class="primary" data-act="newweek">Start Week ${esc((w.num ?? 0) + 1)}</button></div>`
+      : `<div class="section"><button class="primary" data-act="golatest">Back to Week ${esc(latest().num ?? "")}</button></div>`;
     h += `<div style="display:flex;justify-content:center;gap:8px;margin-top:8px"><button class="linkbtn" style="margin:0" data-act="weekmenu">Week settings</button><button class="linkbtn" style="margin:0;color:var(--error)" data-act="delweek">Delete this week</button></div>`;
     $("main").innerHTML = h;
   }
@@ -1026,12 +1035,11 @@
       return;
     }
     if (s.missed) h += `<div class="banner"><span>Marked as missed.</span><button data-act="unmiss">Undo</button></div>`;
-    h += `<div class="label">Gym</div><div class="gymbar"><div class="days gyms">${gyms.map((g) => `<button class="chip${s.gym === g ? " on" : ""}" data-act="gym" data-gym="${esc(g)}">${esc(g)}</button>`).join("")}</div><button class="gadd" data-act="addgym" aria-label="Add or remove gyms">+</button></div>`;
-    h += `<div class="label">Trained on</div><div class="days compact">` +
+    h += `<div class="gymbar"><div class="days gyms">${gyms.map((g) => `<button class="chip${s.gym === g ? " on" : ""}" data-act="gym" data-gym="${esc(g)}">${esc(g)}</button>`).join("")}</div><button class="gadd" data-act="addgym" aria-label="Add or remove gyms">+</button></div>`;
+    h += `<div class="days compact daysrow">` +
       DAYS.map((d) => `<button class="chip${s.day === d && !s.missed ? " on" : ""}" data-act="day" data-day="${d}">${d}</button>`).join("") + `</div>`;
-    h += `<p class="hint" style="margin:12px 4px 0">Tap a number to edit it, or hold and drag.</p>`;
     const named = s.exercises.filter((x) => x.name.trim()), ndone = named.filter((x) => x.done).length;
-    if (named.length) h += `<div class="progress${ndone === named.length ? " full" : ""}"><div class="pt"><span>${ndone === named.length ? "Session complete" : "Progress"}</span><span>${ndone} of ${named.length} done</span></div>${waveSVG(ndone / named.length, ndone === named.length)}</div>`;
+    if (named.length) h += `<div class="progress${ndone === named.length ? " full" : ""}"><div class="pt"><span>${ndone === named.length ? "Session complete" : `${ndone} of ${named.length} done`}</span></div>${waveSVG(ndone / named.length, ndone === named.length)}</div>`;
     const best = bestBefore(w, s.gym);
     h += `<div class="exlist">`;
     exDisplay(s).forEach((ei) => {
@@ -1319,7 +1327,7 @@
       case "export": return exportBackup();
       case "import": return importInput.click();
       case "delweek": return confirmDelete(w);
-      case "golatest": return go("week", { week: latest().id });
+      case "golatest": slideFrom = 1; return go("week", { week: latest().id, replace: true });
       case "open": return go("session", { si: +b.dataset.si });
       case "openweek": return go("week", { week: b.dataset.id });
       case "back": return go("week");
@@ -1571,6 +1579,55 @@
   document.addEventListener("mousemove", (ev) => { if (scrub) scrubMove(ev.clientX, ev.clientY, ev); });
   document.addEventListener("mouseup", scrubEnd);
   $("main").addEventListener("contextmenu", (ev) => { if (ev.target.closest(".half")) ev.preventDefault(); });
+
+  // ---------- swipe left/right on the home screen to change week ----------
+  // Swipe right = older week, swipe left = newer. Starts away from the screen edges so
+  // Android's back gesture still works.
+  let sw = null;
+  $("main").addEventListener("touchstart", (ev) => {
+    if (view !== "week" || drag || ev.touches.length !== 1) return;
+    const t = ev.touches[0];
+    if (t.clientX < 28 || t.clientX > innerWidth - 28) return;
+    sw = { x: t.clientX, y: t.clientY, t: Date.now(), dx: 0, locked: false };
+  }, { passive: true });
+  document.addEventListener("touchmove", (ev) => {
+    if (!sw) return;
+    const t = ev.touches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
+    if (!sw.locked) {
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+        sw.locked = true;
+        if (hold) { clearTimeout(hold.timer); hold = null; }
+        const i = weeks.findIndex((w) => w.id === curId);
+        sw.older = weeks[i - 1]; sw.newer = weeks[i + 1];
+      } else if (Math.abs(dy) > 10) { sw = null; return; }
+      else return;
+    }
+    if (ev.cancelable) ev.preventDefault();
+    const target = dx > 0 ? sw.older : sw.newer;
+    sw.dx = target ? dx : dx * 0.25; // resist when there's no week that way
+    const m = $("main");
+    m.style.transition = "none";
+    m.style.transform = `translateX(${sw.dx}px)`;
+    m.style.opacity = String(1 - Math.min(0.5, Math.abs(sw.dx) / innerWidth));
+  }, { passive: false });
+  function swipeEnd() {
+    if (!sw) return;
+    const s0 = sw; sw = null;
+    if (!s0.locked) return;
+    suppressClick = Date.now();
+    const m = $("main"), dx = s0.dx, v = Math.abs(dx) / Math.max(1, Date.now() - s0.t);
+    const target = dx > 0 ? s0.older : s0.newer;
+    if (target && (Math.abs(dx) > innerWidth * 0.22 || v > 0.5)) {
+      buzz(8);
+      m.animate([{ transform: `translateX(${dx}px)`, opacity: m.style.opacity }, { transform: `translateX(${Math.sign(dx) * innerWidth * 0.5}px)`, opacity: 0 }], { duration: 160, easing: "ease-in", fill: "forwards" })
+        .onfinish = (a) => { slideFrom = -Math.sign(dx); go("week", { week: target.id, replace: true }); m.getAnimations().forEach((x) => x.cancel()); };
+    } else {
+      m.style.transition = "transform .35s cubic-bezier(.2,.9,.25,1.2), opacity .25s";
+      m.style.transform = ""; m.style.opacity = "";
+    }
+  }
+  document.addEventListener("touchend", swipeEnd);
+  document.addEventListener("touchcancel", swipeEnd);
 
   // ---------- bottom bar follows your scroll (slides away going down, back going up) ----------
   const nav = document.querySelector("nav.tabs");
