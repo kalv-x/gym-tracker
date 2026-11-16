@@ -312,6 +312,7 @@
   .vnav button:active { border-radius: 16px; }
   .vnav button.go { background: var(--primary); color: var(--on-primary); flex: 1.3; }
   .vnav button:disabled { opacity: .38; }
+  .vhint { font-size: 13px; color: var(--on-surface-variant); text-align: center; min-height: 18px; margin-top: 8px; }
   .vextra { display: flex; justify-content: space-between; margin-top: 8px; }
   .vextra button { padding: 12px 4px; font-size: 14px; font-weight: 500; color: var(--primary); }
   .vextra button.danger { color: var(--error); }
@@ -643,9 +644,10 @@
     let all = allMode;
     const scrim = showSheet(`<div class="vhead"><h2 id="vname"></h2></div>
       <div class="seg" id="vseg"><button id="seg-one"></button><button id="seg-all"></button></div>
+      <div class="vhint" id="vhint"></div>
       <div class="wheels">
-        <div class="wcol"><div class="wlab">Weight (kg)</div><input class="wtype" id="in-w" inputmode="decimal" autocomplete="off"><div class="wheelwrap"><div class="wheel" id="wh-w"></div></div></div>
-        <div class="wcol"><div class="wlab">Reps</div><input class="wtype" id="in-r" inputmode="decimal" autocomplete="off"><div class="wheelwrap"><div class="wheel" id="wh-r"></div></div></div>
+        <div class="wcol"><div class="wlab" id="lab-w">Weight (kg)</div><input class="wtype" id="in-w" inputmode="decimal" autocomplete="off"><div class="wheelwrap"><div class="wheel" id="wh-w"></div></div></div>
+        <div class="wcol"><div class="wlab" id="lab-r">Reps</div><input class="wtype" id="in-r" inputmode="decimal" autocomplete="off"><div class="wheelwrap"><div class="wheel" id="wh-r"></div></div></div>
       </div>
       <div class="vnav"><button id="v-prev">‹ Prev</button><button id="v-next">Next ›</button><button class="go" id="v-done">Done</button></div>
       <div class="vextra"><button id="v-del" class="danger">Delete this set</button><button id="v-add">+ Add a set</button></div>`);
@@ -700,6 +702,10 @@
         $("v-next").disabled = !nx;
         $("v-next").textContent = "Next ›";
       }
+      const mixed = (f2) => !ex().sets.every((x) => x[f2] === ex().sets[0][f2]);
+      $("lab-w").textContent = all && mixed("w") ? "Weight · differs" : "Weight (kg)";
+      $("lab-r").textContent = all && mixed("r") ? "Reps · differ" : "Reps";
+      $("vhint").textContent = all ? (mixed("w") || mixed("r") ? "Tap a highlighted number to make all sets match." : `Changes apply to all ${n} sets.`) : "";
       $("v-del").textContent = all ? "" : `Delete set ${k + 1}`;
       $("v-del").style.visibility = all ? "hidden" : "visible";
     }
@@ -711,6 +717,7 @@
         if (i !== st[f2].sel) {
           mark(f2, i);
           input.value = st[f2].vals[i];
+          st[f2].touched = true;
           buzz(4);
         }
         clearTimeout(st[f2].t);
@@ -718,15 +725,17 @@
       }, { passive: true });
       el.addEventListener("click", (ev) => {
         const it = ev.target.closest(".witem");
-        if (it) el.scrollTo({ top: +it.dataset.i * ITEM, behavior: "smooth" });
+        if (!it) return;
+        if (+it.dataset.i === st[f2].sel) { commit(f2, st[f2].vals[st[f2].sel]); buzz(10); load(); return; }
+        el.scrollTo({ top: +it.dataset.i * ITEM, behavior: "smooth" });
       });
-      input.addEventListener("input", () => commit(f2, input.value.trim()));
+      input.addEventListener("input", () => { st[f2].touched = true; commit(f2, input.value.trim()); });
       input.addEventListener("change", () => buildWheel(f2));
       input.addEventListener("focus", () => input.select());
       input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); input.blur(); } });
     }
-    $("seg-one").onclick = () => { all = false; load(); };
-    $("seg-all").onclick = () => { all = true; load(); };
+    $("seg-one").onclick = () => { all = false; st.w.touched = st.r.touched = false; load(); };
+    $("seg-all").onclick = () => { all = true; st.w.touched = st.r.touched = false; load(); };
     $("v-prev").onclick = () => {
       if (all) { const eo = exOrder(), p = eo.indexOf(ei); if (p > 0) { ei = eo[p - 1]; k = 0; } }
       else { const o = order(), p = o.findIndex(([a, b]) => a === ei && b === k); if (p > 0) [ei, k] = o[p - 1]; }
@@ -750,8 +759,21 @@
       k = ex().sets.length - 1; all = false;
       touch(w); render(); load();
     };
-    $("v-done").onclick = () => closeModal();
-    scrim.addEventListener("click", (ev) => { if (ev.target === scrim) closeModal(); });
+    // In "All sets" mode, leaving the exercise applies what's shown to every set,
+    // even if the wheels weren't touched (e.g. sets were 80, 80, 85 and you want them all at 80).
+    // Only fields you actually changed are applied, so varied reps (10, 10, 9, 9) survive a weight change.
+    function applyAll() {
+      for (const f2 of ["w", "r"]) {
+        clearTimeout(st[f2].t);
+        if (st[f2].touched && ex()) commit(f2, $("in-" + f2).value.trim());
+        st[f2].touched = false;
+      }
+    }
+    const prevNav = $("v-prev").onclick, nextNav = $("v-next").onclick;
+    $("v-prev").onclick = () => { applyAll(); prevNav(); };
+    $("v-next").onclick = () => { applyAll(); nextNav(); };
+    $("v-done").onclick = () => { applyAll(); closeModal(); };
+    scrim.addEventListener("click", (ev) => { if (ev.target === scrim) { applyAll(); closeModal(); } });
     load();
   }
 
@@ -823,7 +845,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.6"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.7"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -1166,7 +1188,7 @@
       closing = true;
       history.back();
       // If history can't go back, close it anyway (only if this close never completed)
-      setTimeout(() => { if (closing) { closing = false; location.replace("#" + baseHash()); } }, 400);
+      setTimeout(() => { if (closing) { closing = false; location.replace("#" + baseHash()); } }, 1200);
     } else {
       $("modal").innerHTML = "";
       after && after();
