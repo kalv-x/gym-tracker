@@ -132,15 +132,16 @@
   .tl { font-size: 13px; color: var(--muted); }
   .tv { font-size: 34px; line-height: 1.1; font-weight: 500; color: var(--primary); font-variant-numeric: tabular-nums; }
   .tv small { font-size: 15px; color: var(--muted); font-weight: 400; }
-  .scard2 { background: var(--surface-c); border-radius: 24px; padding: 16px 18px 12px; }
-  .st { display: flex; justify-content: space-between; align-items: baseline; font-weight: 500; margin-bottom: 12px; }
-  .st .sm { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .scard2 { background: var(--surface-c); border-radius: 24px; padding: 14px 16px 10px; display: flex; flex-direction: column; min-width: 0; }
+  .st { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .st .sm { font-size: 13px; font-weight: 500; color: var(--primary); }
   .hgrid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 4px; }
   .hcol { display: grid; gap: 4px; }
-  .hcol i { aspect-ratio: 1; border-radius: 5px; background: var(--outline-variant); opacity: .45; }
+  .hcol i { aspect-ratio: 1; border-radius: 4px; background: var(--outline-variant); opacity: .45; }
   .hcol i.on { background: var(--primary); opacity: 1; }
   .hcol:not(.me) i.on { opacity: .62; }
-  .vbars { display: flex; align-items: flex-end; gap: 5px; height: 84px; }
+  .vbars { display: flex; align-items: flex-end; gap: 4px; flex: 1; min-height: 56px; }
   .vbar { flex: 1; height: var(--h); border-radius: 6px 6px 3px 3px; background: var(--primary); opacity: .45; transform-origin: bottom; }
   .intro .vbar { animation: grow .6s var(--spring) both; }
   .vbar.me { opacity: 1; }
@@ -882,7 +883,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.16"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.17"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -1076,7 +1077,7 @@
     weeks.slice(0, weeks.indexOf(w) + 1).forEach((ww) => ww.sessions.forEach((x) => { if (isDone(x)) { const d = sessDate(ww, x); if (d.getMonth() === m && d.getFullYear() === y) month++; } }));
     const lbl = (d) => `${d.getDate()} ${MON[d.getMonth()]}`;
     // consistency grid: last 16 calendar weeks, a filled cell per session done
-    const span = calWeeks(w, 16);
+    const span = calWeeks(w, 8);
     const rows = Math.max(4, ...span.map((c) => (c.w ? Math.min(6, c.w.sessions.length) : 0)));
     let grid = "";
     span.forEach((c) => {
@@ -1086,17 +1087,19 @@
       grid += `<div class="hcol${c.w === w ? " me" : ""}">${col}</div>`;
     });
     // weekly volume: last 12 calendar weeks
-    const vs = calWeeks(w, 12), vols = vs.map((c) => (c.w ? weekVolume(c.w) : 0)), max = Math.max(1, ...vols);
+    const vs = calWeeks(w, 8), vols = vs.map((c) => (c.w ? weekVolume(c.w) : 0)), max = Math.max(1, ...vols);
     const bars = vs.map((c, j) => `<div class="vbar${c.w === w ? " me" : ""}" style="--h:${vols[j] ? Math.max(3, (vols[j] / max) * 100) : 0}%"></div>`).join("");
     return `<div class="stats">
       <div class="tiles"><div class="tile"><span class="tl">Sessions in ${MON[m]}</span><span class="tv">${month}</span></div>
       <div class="tile"><span class="tl">Week streak</span><span class="tv">${streak}<small>${streak === 1 ? " week" : " weeks"}</small></span></div></div>
-      <div class="scard2"><div class="st"><span>Consistency</span><span class="sm">last 16 weeks</span></div>
-        <div class="hgrid" style="--cols:16">${grid}</div>
-        <div class="axis"><span>${lbl(span[0].d)}</span><span>${isLatest ? "This week" : lbl(span[15].d)}</span></div></div>
-      <div class="scard2"><div class="st"><span>Weekly volume</span><span class="sm">${fmtVol(vols[vols.length - 1])} ${isLatest ? "this week" : "that week"}</span></div>
-        <div class="vbars">${bars}</div>
-        <div class="axis"><span>${lbl(vs[0].d)}</span><span>${isLatest ? "This week" : lbl(vs[11].d)}</span></div></div>
+      <div class="charts">
+        <div class="scard2"><div class="st"><span>Consistency</span></div>
+          <div class="hgrid" style="--cols:${span.length}">${grid}</div>
+          <div class="axis"><span>${lbl(span[0].d)}</span><span>${isLatest ? "Now" : lbl(span[span.length - 1].d)}</span></div></div>
+        <div class="scard2"><div class="st"><span>Volume</span><span class="sm">${fmtVol(vols[vols.length - 1])}</span></div>
+          <div class="vbars">${bars}</div>
+          <div class="axis"><span>${lbl(vs[0].d)}</span><span>${isLatest ? "Now" : lbl(vs[vs.length - 1].d)}</span></div></div>
+      </div>
     </div>`;
   }
 
