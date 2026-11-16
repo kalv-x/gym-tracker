@@ -72,7 +72,14 @@
   /* Week: session cards */
   .scard { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; background: var(--surface-c); border-radius: 28px; padding: 18px 18px; margin: 10px 0; transition: border-radius .35s var(--spring), transform .35s var(--spring); }
   .scard:active { border-radius: 18px; transform: scale(.98); }
-  .sdot { width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto; background: var(--surface-highest); display: grid; place-items: center; }
+  .scard { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; position: relative; }
+  .scard.dragging { z-index: 5; transition: none; border-radius: 22px; box-shadow: 0 10px 28px rgba(0,0,0,.28), 0 2px 6px rgba(0,0,0,.12); }
+  .slist.sorting .scard:not(.dragging) { transition: transform .25s var(--spring); }
+  .sdot { width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto; background: conic-gradient(var(--primary) var(--p, 0%), var(--surface-highest) 0); display: grid; place-items: center; transition: border-radius .4s var(--spring); }
+  .sdot::before { content: ""; grid-area: 1/1; width: 34px; height: 34px; border-radius: 50%; background: var(--surface-c); }
+  .scard.done .sdot::before, .scard.missed .sdot::before { display: none; }
+  .scard.done .sdot::after, .scard.missed .sdot::after { grid-area: 1/1; }
+  .scard.missed .sdot { background: var(--surface-highest); }
   .scard.done { background: var(--success-container); color: var(--on-success-container); }
   .scard.done .sdot { background: var(--success); border-radius: 14px; }
   .scard.done .sdot::after { content: ""; width: 18px; height: 10px; border: solid var(--on-success); border-width: 0 0 3px 3px; transform: translateY(-2px) rotate(-45deg); }
@@ -95,7 +102,7 @@
   .section p { color: var(--on-surface-variant); font-size: 14px; margin: 10px 4px 0; }
 
   /* Day picker: connected button group */
-  .label { font-size: 14px; font-weight: 500; color: var(--on-surface-variant); margin: 18px 4px 8px; }
+  .label { font-size: 14px; font-weight: 500; color: var(--on-surface-variant); margin: 8px 4px 8px; }
   .days { display: flex; gap: 2px; }
   .chip { flex: 1 1 0; min-width: 0; height: 48px; font-size: 14px; font-weight: 500; background: var(--surface-highest); color: var(--on-surface-variant); border-radius: 8px; transition: border-radius .35s var(--spring), background .2s, color .2s; }
   .chip:first-child { border-radius: 24px 8px 8px 24px; }
@@ -116,6 +123,9 @@
   .ebtn:disabled { opacity: .38; }
   .addbtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 56px; margin-top: 14px; border-radius: 28px; background: var(--primary-container); color: var(--on-primary-container); font-weight: 500; transition: border-radius .35s var(--spring), transform .35s var(--spring); }
   .addbtn:active { border-radius: 16px; transform: scale(.98); }
+  .btnrow { display: flex; gap: 8px; margin-top: 14px; }
+  .btnrow .addbtn { flex: 2; margin: 0; }
+  .btnrow .secondary { flex: 1; height: 56px; border-radius: 28px; }
 
   /* Navigation bar */
   nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface-c); padding: 12px 0 calc(env(safe-area-inset-bottom) + 14px); }
@@ -136,9 +146,10 @@
   .wrow .n { font-weight: 500; width: 92px; white-space: nowrap; }
   .wrow .d { flex: 1; color: var(--on-surface-variant); font-size: 14px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .wrow .c { font-size: 13px; color: var(--on-surface-variant); }
-  .backup { background: var(--surface-c); border-radius: 28px; padding: 16px 16px 16px 20px; display: flex; gap: 12px; align-items: center; }
-  .backup .bl { flex: 1; font-size: 14px; color: var(--on-surface-variant); line-height: 1.45; }
-  .backup .bb { display: flex; flex-direction: column; gap: 6px; }
+  .backup { background: var(--surface-c); border-radius: 28px; padding: 18px 16px 16px; }
+  .backup .bl { font-size: 14px; color: var(--on-surface-variant); line-height: 1.5; margin: 0 4px 14px; }
+  .backup .bb { display: flex; gap: 8px; }
+  .backup .bb .ebtn { flex: 1; }
 
   /* Bottom sheets */
   @keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
@@ -197,7 +208,7 @@
 
   /* Session: exercise list */
   .exlist { display: flex; flex-direction: column; gap: 3px; margin-top: 14px; }
-  .exr { position: relative; background: var(--surface-c); border-radius: 8px; padding: 8px 12px 14px 14px; transition: background .3s, border-radius .35s var(--spring); }
+  .exr { position: relative; background: var(--surface-c); border-radius: 8px; padding: 6px 12px 12px 12px; transition: background .3s, border-radius .35s var(--spring); }
   .exlist .exr:first-child { border-radius: 28px 28px 8px 8px; }
   .exlist .exr:last-child { border-radius: 8px 8px 28px 28px; }
   .exlist .exr:only-child { border-radius: 28px; }
@@ -207,7 +218,7 @@
   .exr-name .nm { font-weight: 500; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .exr-name .dots { color: var(--on-surface-variant); font-size: 18px; letter-spacing: 1px; padding: 0 4px; }
   .exr.done .exr-name .dots { color: inherit; opacity: .7; }
-  .grip { width: 30px; height: 44px; margin-left: -8px; flex: 0 0 auto; display: grid; place-items: center; color: var(--on-surface-variant); opacity: .6; touch-action: none; cursor: grab; }
+  .grip { width: 28px; height: 44px; margin-left: -4px; flex: 0 0 auto; display: grid; place-items: center; color: var(--on-surface-variant); opacity: .6; touch-action: none; cursor: grab; }
   .exr.done .grip { color: inherit; }
   .grip svg { width: 12px; height: 18px; }
   .exr.dragging { z-index: 5; border-radius: 24px !important; background: var(--surface-highest); box-shadow: 0 8px 24px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.1); }
@@ -221,32 +232,34 @@
   .exr.done .tick::before { width: 18px; height: 9px; border-radius: 0; box-shadow: none; border: solid var(--on-success); border-width: 0 0 3px 3px; transform: translateY(-2px) rotate(-45deg); }
   @keyframes tickpop { 0% { transform: scale(1); } 35% { transform: scale(1.18) rotate(-6deg); } 100% { transform: scale(1); } }
   .exr.justdone .tick { animation: tickpop .5s var(--spring-bouncy); }
-  .cells { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
-  .cell { position: relative; width: 74px; height: 46px; display: flex; background: var(--surface-lowest); border-radius: 16px; transition: border-radius .35s var(--spring); }
+  .cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 48px; gap: 6px; margin-top: 4px; }
+  .cell { position: relative; min-width: 0; height: 48px; display: flex; background: var(--surface-lowest); border-radius: 16px; transition: border-radius .35s var(--spring); }
   .exr.done .cell { background: color-mix(in srgb, var(--surface-lowest) 70%, transparent); }
   .cell .half:first-of-type { border-radius: 16px 0 0 16px; }
   .cell .half:last-of-type { border-radius: 0 16px 16px 0; }
   .half { height: 100%; font-variant-numeric: tabular-nums; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; transition: background .15s; }
-  .hw { flex: 1.2; font-weight: 600; font-size: 16px; text-align: right; padding-right: 2px; }
-  .hr { flex: 1; font-size: 15px; font-weight: 500; color: var(--on-surface-variant); text-align: left; padding-left: 2px; }
+  .hw { flex: 1 1 0; min-width: 0; font-weight: 600; font-size: 16px; text-align: right; padding: 0 2px 0 4px; white-space: nowrap; }
+  .hr { flex: 1 1 0; min-width: 0; font-size: 15px; font-weight: 500; color: var(--on-surface-variant); text-align: left; padding: 0 4px 0 1px; white-space: nowrap; }
   .exr.done .hr { color: inherit; opacity: .75; }
-  .half.long { font-size: 13px; }
+  .half.sm { font-size: 14.5px; letter-spacing: -.01em; }
+  .half.xs { font-size: 12.5px; letter-spacing: -.02em; }
+  .hw.empty { font-size: 12px; font-weight: 600; letter-spacing: .04em; }
   .half.empty { font-weight: 400; color: var(--on-surface-variant); }
   .half.scrub { background: var(--primary); color: var(--on-primary) !important; opacity: 1 !important; }
   .cell.pr { background: var(--tertiary-container); color: var(--on-tertiary-container); border-radius: 16px 16px 4px 16px; }
   .cell.pr .hr { color: inherit; }
   .prb { position: absolute; top: -8px; right: -4px; background: var(--tertiary); color: var(--surface); font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 2px 6px; border-radius: 8px; pointer-events: none; z-index: 1; }
-  .addcell { width: 40px; height: 46px; border-radius: 16px; color: var(--primary); font-size: 22px; line-height: 1; box-shadow: inset 0 0 0 1.5px var(--outline-variant); }
+  .addcell { width: 48px; height: 48px; border-radius: 16px; color: var(--primary); font-size: 22px; line-height: 1; box-shadow: inset 0 0 0 1.5px var(--outline-variant); }
   .exr.done .addcell { color: inherit; box-shadow: inset 0 0 0 1.5px currentColor; opacity: .5; }
   .bubble { position: fixed; z-index: 40; transform: translate(-50%, -100%); background: var(--primary); color: var(--on-primary); font-weight: 600; font-size: 22px; padding: 10px 18px; border-radius: 20px; pointer-events: none; opacity: 0; transition: opacity .12s; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .bubble.on { opacity: 1; }
   .confetti { position: fixed; z-index: 40; width: 9px; height: 13px; border-radius: 3px; pointer-events: none; }
 
   /* Wavy progress indicator */
-  .progress { margin: 18px 4px 0; }
-  .progress .pt { display: flex; justify-content: space-between; font-size: 14px; color: var(--on-surface-variant); font-weight: 500; margin-bottom: 6px; }
+  .progress { margin: 16px 0 0; }
+  .progress .pt { display: flex; justify-content: space-between; font-size: 14px; color: var(--on-surface-variant); font-weight: 500; margin: 0 4px 6px; }
   .progress.full .pt { color: var(--success); }
-  .wave { display: block; width: 100%; height: 14px; overflow: visible; }
+  .wave { display: block; width: calc(100% - 8px); margin: 0 4px; height: 14px; overflow: visible; }
   .wave .track { stroke: var(--secondary-container); }
   .wave .act { stroke: var(--primary); }
   .wave .stop { fill: var(--primary); }
@@ -615,8 +628,8 @@
       <div class="vextra"><button id="v-del" class="danger">Delete this set</button><button id="v-add">+ Add a set</button></div>`);
     const st = { w: {}, r: {} };
     const ex = () => s.exercises[ei], set = () => ex().sets[k];
-    const order = () => { const o = []; s.exercises.forEach((x, i) => x.sets.forEach((_, j) => o.push([i, j]))); return o; };
-    const exOrder = () => s.exercises.map((x, i) => i).filter((i) => s.exercises[i].sets.length);
+    const order = () => { const o = []; exDisplay(s).forEach((i) => s.exercises[i].sets.forEach((_, j) => o.push([i, j]))); return o; };
+    const exOrder = () => exDisplay(s).filter((i) => s.exercises[i].sets.length);
 
     function commit(f2, v) {
       const targets = all ? ex().sets : [set()];
@@ -753,7 +766,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.2"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.3"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -846,13 +859,6 @@
     if (!weeks.find((w) => w.id === curId)) { curId = latest() ? latest().id : null; if (view === "session") view = "week"; }
     if (h !== lastBase) {
       lastBase = h;
-      if (view === "session") { // keep ticked exercises grouped at the top
-        const w = cur(), s = curSession();
-        if (s) {
-          const sorted = [...s.exercises.filter((x) => x.done), ...s.exercises.filter((x) => !x.done)];
-          if (sorted.some((x, i) => x !== s.exercises[i])) { s.exercises = sorted; touch(w); }
-        }
-      }
       editMode = pendingEdit; pendingEdit = false;
       render();
       window.scrollTo(0, 0);
@@ -862,7 +868,7 @@
     }
   }
   window.addEventListener("hashchange", () => {
-    if (!location.hash.endsWith("-m") && $("modal").innerHTML) $("modal").innerHTML = "";
+    if (!location.hash.endsWith("-m")) { closing = false; if ($("modal").innerHTML) $("modal").innerHTML = ""; }
     route();
     if (pendingAfter) { const f = pendingAfter; pendingAfter = null; f(); }
   });
@@ -898,20 +904,23 @@
     else if (weeks.length > 1 && !w.sessions.some((x) => x.day || x.missed || x.exercises.some((e) => e.done)))
       h += `<div class="banner"><span>Started this week by mistake?</span><button data-act="delweek">Delete it</button></div>`;
     else h += `<p class="hint">Tap a session to log it.</p>`;
-    w.sessions.forEach((s, i) => {
-      const ex = named(s), d = ex.filter((e) => e.done).length;
+    h += `<div class="slist">`;
+    sessDisplay(w).forEach((i) => {
+      const s = w.sessions[i], ex = named(s), d = ex.filter((e) => e.done).length;
       let cls = "", stat;
       if (s.missed) { cls = "missed"; stat = "Missed"; }
       else if (s.day) { cls = "done"; stat = `Done ${DAY_FULL[s.day] || s.day} · ${d}/${ex.length} exercises`; }
       else if (d) stat = `In progress · ${d}/${ex.length} exercises`;
       else stat = `Not done yet · ${ex.length} exercises`;
-      h += `<button class="scard ${cls}" data-act="open" data-si="${i}"><span class="sdot"></span><span class="sinfo"><div class="sname">${esc(sessionName(s, i))}</div><div class="sstat">${stat}</div></span><span class="chev">›</span></button>`;
+      const pct = ex.length ? Math.round((d / ex.length) * 100) : 0;
+      h += `<button class="scard ${cls}" data-act="open" data-si="${i}"><span class="sdot" style="--p:${pct}%"></span><span class="sinfo"><div class="sname">${esc(sessionName(s, i))}</div><div class="sstat">${stat}</div></span><span class="chev">›</span></button>`;
     });
+    h += `</div>`;
     if (isLatest) {
       h += `<div class="section"><h3>Finished this week?</h3><button class="primary" data-act="newweek">Start Week ${esc((w.num ?? 0) + 1)}</button>
         <p>Copies this week's exercises and weights into a new week, so you only change what's different.</p></div>`;
     }
-    h += `<div style="display:flex;justify-content:center;gap:8px;margin-top:8px"><button class="linkbtn" style="margin:0" data-act="weekmenu">Week settings</button><button class="linkbtn" style="margin:0;color:var(--accent)" data-act="delweek">Delete this week</button></div>`;
+    h += `<div style="display:flex;justify-content:center;gap:8px;margin-top:8px"><button class="linkbtn" style="margin:0" data-act="weekmenu">Week settings</button><button class="linkbtn" style="margin:0;color:var(--error)" data-act="delweek">Delete this week</button></div>`;
     $("main").innerHTML = h;
   }
 
@@ -939,22 +948,22 @@
     if (s.missed) h += `<div class="banner"><span>Marked as missed.</span><button data-act="unmiss">Undo</button></div>`;
     h += `<div class="label">Trained on</div><div class="days compact">` +
       DAYS.map((d) => `<button class="chip${s.day === d && !s.missed ? " on" : ""}" data-act="day" data-day="${d}">${d}</button>`).join("") + `</div>`;
-    h += `<p class="hint" style="margin-top:12px">Tap a number to edit it, or hold and drag.</p>`;
+    h += `<p class="hint" style="margin:12px 4px 0">Tap a number to edit it, or hold and drag.</p>`;
     const named = s.exercises.filter((x) => x.name.trim()), ndone = named.filter((x) => x.done).length;
     if (named.length) h += `<div class="progress${ndone === named.length ? " full" : ""}"><div class="pt"><span>${ndone === named.length ? "Session complete" : "Progress"}</span><span>${ndone} of ${named.length} done</span></div>${waveSVG(ndone / named.length, ndone === named.length)}</div>`;
     const best = bestBefore(w);
     h += `<div class="exlist">`;
-    s.exercises.forEach((e, ei) => {
+    exDisplay(s).forEach((ei) => {
+      const e = s.exercises[ei];
       h += `<div class="exr${e.done ? " done" : ""}" data-ei="${ei}">
         <div class="exr-top"><span class="grip" aria-label="Drag to reorder"><svg viewBox="0 0 12 18" fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg></span><button class="exr-name" data-act="exmenu"><span class="nm">${esc(e.name || "Untitled")}</span><span class="dots">⋯</span></button>
         <button class="tick" data-act="tick" aria-label="Mark ${esc(e.name)} done"><svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></button></div>
         ${e.note ? `<div class="exnote">${esc(e.note)}</div>` : ""}
-        <div class="cells">${e.sets.map((x, k) => { const pr = isPR(e, x, best); return `<div class="cell${pr ? " pr" : ""}">${pr ? `<span class="prb">PR</span>` : ""}${half(x.w, "w", k)}${half(x.r, "r", k)}</div>`; }).join("")}<button class="addcell" data-act="addset" aria-label="Add a set">+</button></div></div>`;
+        <div class="cells">${e.sets.map((x, k) => { const pr = isPR(e, x, best); return `<div class="cell${pr ? " pr" : ""}" style="grid-area:${Math.floor(k / 4) + 1}/${(k % 4) + 1}">${pr ? `<span class="prb">PR</span>` : ""}${half(x.w, "w", k, x.r)}${half(x.r, "r", k, x.w)}</div>`; }).join("")}<button class="addcell" data-act="addset" aria-label="Add a set" style="grid-area:${Math.max(1, Math.ceil(e.sets.length / 4))}/5">+</button></div></div>`;
     });
     if (!s.exercises.length) h += `<div class="empty">No exercises yet.</div>`;
     h += `</div>`;
-    h += `<button class="addbtn" data-act="pick">+ Add exercise</button>`;
-    h += `<button class="secondary" data-act="edit" style="margin-top:18px">Edit exercises</button>`;
+    h += `<div class="btnrow"><button class="addbtn" data-act="pick">+ Add exercise</button><button class="secondary" data-act="edit">Edit</button></div>`;
     if (!s.missed) h += `<button class="linkbtn" data-act="miss">Mark this session as missed</button>`;
     $("main").innerHTML = h;
   }
@@ -974,22 +983,39 @@
   function isPR(e, x, best) { const v = num(x.w), b = best.get(key(e.name)); return !isNaN(v) && b != null && v > b && !!x.r; }
 
   // Done exercises sit at the top, in the order they were ticked
-  function placeAfterTick(s, e) {
-    // Ticked: goes to the end of the done group. Unticked: goes to the top of the to-do group.
-    const rest = s.exercises.filter((x) => x !== e);
-    s.exercises = [...rest.filter((x) => x.done), e, ...rest.filter((x) => !x.done)];
+  // The arrays keep the planned order. What you see puts done items first:
+  // exercises in the order they were ticked, sessions by the weekday they were done.
+  function exDisplay(s) {
+    const idx = s.exercises.map((_, i) => i);
+    const done = idx.filter((i) => s.exercises[i].done).sort((a, b) => (s.exercises[a].doneSeq || 0) - (s.exercises[b].doneSeq || 0) || a - b);
+    return [...done, ...idx.filter((i) => !s.exercises[i].done)];
   }
+  function sessDisplay(w) {
+    const idx = w.sessions.map((_, i) => i);
+    const done = idx.filter((i) => sessionDone(w.sessions[i])).sort((a, b) => DAYS.indexOf(w.sessions[a].day) - DAYS.indexOf(w.sessions[b].day) || a - b);
+    return [...done, ...idx.filter((i) => !sessionDone(w.sessions[i]))];
+  }
+  // Put `item` into the planned order so it sits where it was dropped among the not-done items
+  function moveInPlan(arr, item, todoOrder) {
+    const rest = arr.filter((x) => x !== item), k = todoOrder.indexOf(item);
+    const next = todoOrder[k + 1], prev = todoOrder[k - 1];
+    const at = next ? rest.indexOf(next) : prev ? rest.indexOf(prev) + 1 : rest.length;
+    rest.splice(at, 0, item);
+    return rest;
+  }
+  function objFor(el) {
+    if (el.dataset.ei != null) { const s = curSession(); return s && s.exercises[+el.dataset.ei]; }
+    const w = cur(); return w && w.sessions[+el.dataset.si];
+  }
+  const ROWS = ".exr, .scard";
   function rowRects() {
-    const m = new Map(), s = curSession();
-    if (!s) return m;
-    $("main").querySelectorAll(".exr").forEach((el) => { const e = s.exercises[+el.dataset.ei]; if (e) m.set(e, el.getBoundingClientRect().top); });
+    const m = new Map();
+    $("main").querySelectorAll(ROWS).forEach((el) => { const o = objFor(el); if (o) m.set(o, el.getBoundingClientRect().top); });
     return m;
   }
   function flip(before) {
-    const s = curSession();
-    if (!s) return;
-    $("main").querySelectorAll(".exr").forEach((el) => {
-      const e = s.exercises[+el.dataset.ei], old = before.get(e);
+    $("main").querySelectorAll(ROWS).forEach((el) => {
+      const e = objFor(el), old = before.get(e);
       if (old == null) return;
       const dy = old - el.getBoundingClientRect().top;
       if (Math.abs(dy) > 1) el.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 320, easing: "cubic-bezier(.2,.8,.2,1)" });
@@ -1022,10 +1048,15 @@
       (end > 0 ? `<g clip-path="url(#wclip)"><path class="act${full ? "" : " wv"}" d="${d}" fill="none" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>` : "") + `</svg>`;
   }
 
-  function halfText(v, f) { const t = String(v ?? ""); return t ? (f === "r" ? "×" + t : t) : "–"; }
-  function half(v, f, k) {
+  function halfText(v, f, other) {
     const t = String(v ?? "");
-    return `<button class="half ${f === "w" ? "hw" : "hr"}${t ? "" : " empty"}${t.length > 4 ? " long" : ""}" data-act="val" data-f="${f}" data-k="${k}" aria-label="Set ${k + 1} ${f === "w" ? "weight" : "reps"}">${esc(halfText(v, f))}</button>`;
+    if (t) return f === "r" ? "×" + t : t;
+    return f === "w" && other ? "BW" : "–"; // reps but no weight = bodyweight
+  }
+  function half(v, f, k, other) {
+    const t = String(v ?? ""), len = t.length;
+    const size = f === "w" ? (len >= 5 ? " xs" : len === 4 ? " sm" : "") : (len >= 3 ? " sm" : "");
+    return `<button class="half ${f === "w" ? "hw" : "hr"}${t ? "" : " empty"}${size}" data-act="val" data-f="${f}" data-k="${k}" aria-label="Set ${k + 1} ${f === "w" ? "weight" : "reps"}">${esc(halfText(v, f, other))}</button>`;
   }
   function vbox(v, f, k) {
     const t = String(v ?? "");
@@ -1070,12 +1101,14 @@
     });
   }
   let pendingAfter = null;
+  let closing = false;
   function closeModal(after) {
     if (location.hash.endsWith("-m")) {
       pendingAfter = after || null;
+      closing = true;
       history.back();
-      // If the frame's history can't go back, close it anyway
-      setTimeout(() => { if (location.hash.endsWith("-m")) { location.replace("#" + baseHash()); } }, 400);
+      // If history can't go back, close it anyway (only if this close never completed)
+      setTimeout(() => { if (closing) { closing = false; location.replace("#" + baseHash()); } }, 400);
     } else {
       $("modal").innerHTML = "";
       after && after();
@@ -1185,7 +1218,7 @@
       id: "w" + iso(start) + "-" + uid(),
       num: last && last.num != null ? last.num + 1 : 1,
       start: iso(start), tag: "",
-      sessions: last ? clone(last.sessions).map((s) => ({ ...s, day: "", missed: false, note: "", exercises: s.exercises.map((e) => ({ ...e, done: false, note: "" })) })) : [],
+      sessions: last ? clone(last.sessions).map((s) => ({ ...s, day: "", missed: false, note: "", exercises: s.exercises.map((e) => ({ ...e, done: false, note: "", doneSeq: undefined })) })) : [],
     };
     touch(w); rebuild(); go("week", { week: w.id });
   }
@@ -1194,7 +1227,7 @@
   document.body.addEventListener("click", (ev) => {
     const b = ev.target.closest("[data-act]");
     if (!b || $("modal").contains(b)) return;
-    if (b.classList.contains("half") && Date.now() - suppressClick < 600) return;
+    if ((b.classList.contains("half") || b.classList.contains("scard")) && Date.now() - suppressClick < 350) return;
     const act = b.dataset.act;
     const w = cur(), s = curSession();
     const exel = b.closest("[data-ei]");
@@ -1224,7 +1257,7 @@
           const t = new Date(), mon = parseDate(w.start), diff = Math.floor((t - mon) / 864e5);
           if (diff >= 0 && diff < 7) s.day = DAYS[(t.getDay() + 6) % 7];
         }
-        placeAfterTick(s, e);
+        if (e.done) e.doneSeq = Date.now(); else delete e.doneSeq;
         touch(w); render(); flip(before);
         buzz(e.done ? 15 : 6);
         if (e.done) {
@@ -1264,27 +1297,28 @@
   $("main").addEventListener("keydown", (ev) => { if (ev.key === "Enter" && ev.target.matches("input")) { ev.preventDefault(); ev.target.blur(); } });
 
   // ---------- drag rows to reorder ----------
-  let drag = null;
-  $("main").addEventListener("pointerdown", (ev) => {
-    const g = ev.target.closest(".grip");
-    if (!g || drag || scrub) return;
-    const s = curSession(), row = g.closest(".exr");
-    if (!s || !row) return;
-    ev.preventDefault();
-    const rows = [...$("main").querySelectorAll(".exr")];
-    const from = rows.indexOf(row);
-    const e = s.exercises[+row.dataset.ei];
-    const doneCount = s.exercises.filter((x) => x.done).length;
-    // Ticked rows stay within the ticked group; unticked rows within the unticked group
-    const lo = e.done ? 0 : doneCount, hi = e.done ? doneCount - 1 : rows.length - 1;
-    const pos = rows.map((r) => { const b = r.getBoundingClientRect(); return { top: b.top + scrollY, h: b.height }; });
-    drag = { row, rows, from, to: from, lo, hi, pos, startY: ev.clientY + scrollY, pointerId: ev.pointerId, y: ev.clientY };
-    g.setPointerCapture(ev.pointerId);
-    row.closest(".exlist").classList.add("sorting");
+  // Exercises: drag the grip. Sessions: press and hold the card, then drag.
+  // Done items stay in the done group; not-done items in the not-done group.
+  let drag = null, hold = null;
+  function beginDrag(row, y, kind) {
+    const rows = [...$("main").querySelectorAll(kind === "ex" ? ".exr" : ".scard")];
+    const from = rows.indexOf(row), item = objFor(row);
+    let lo, hi;
+    if (kind === "ex") {
+      const doneCount = curSession().exercises.filter((x) => x.done).length;
+      lo = item.done ? 0 : doneCount; hi = item.done ? doneCount - 1 : rows.length - 1;
+    } else {
+      if (sessionDone(item)) { buzz([8, 40, 8]); return false; } // done sessions stay in weekday order
+      lo = cur().sessions.filter(sessionDone).length; hi = rows.length - 1;
+    }
+    const pos = rows.map((r) => { const bx = r.getBoundingClientRect(); return { top: bx.top + scrollY, h: bx.height }; });
+    drag = { kind, row, rows, from, to: from, lo, hi, pos, item, startY: y + scrollY, y };
+    row.parentElement.classList.add("sorting");
     row.classList.add("dragging");
-    buzz(10);
+    buzz(12);
     drag.raf = requestAnimationFrame(dragTick);
-  });
+    return true;
+  }
   function dragLayout() {
     const d = drag, dy = d.y + scrollY - d.startY;
     d.row.style.transform = `translateY(${dy}px) scale(1.02)`;
@@ -1298,12 +1332,13 @@
     }
     to = Math.max(d.lo, Math.min(d.hi, to));
     if (to !== d.to) { d.to = to; buzz(4); }
-    const h = d.pos[d.from].h;
+    const gap = d.from + 1 < d.pos.length ? d.pos[d.from + 1].top - d.pos[d.from].top : d.pos[d.from].h + 3;
+    const back = d.from > 0 ? d.pos[d.from].top - d.pos[d.from - 1].top : gap;
     d.rows.forEach((r, j) => {
       if (j === d.from) return;
       let shift = 0;
-      if (d.from < to && j > d.from && j <= to) shift = -h;
-      if (to < d.from && j >= to && j < d.from) shift = h;
+      if (d.from < to && j > d.from && j <= to) shift = -gap;
+      if (to < d.from && j >= to && j < d.from) shift = back;
       r.style.transform = shift ? `translateY(${shift}px)` : "";
     });
   }
@@ -1311,29 +1346,67 @@
     if (!drag) return;
     const edge = 90, y = drag.y;
     if (y < edge) scrollBy(0, -Math.ceil((edge - y) / 6));
-    else if (y > innerHeight - edge - 70) scrollBy(0, Math.ceil((y - (innerHeight - edge - 70)) / 6));
+    else if (y > innerHeight - edge - 80) scrollBy(0, Math.ceil((y - (innerHeight - edge - 80)) / 6));
     dragLayout();
     drag.raf = requestAnimationFrame(dragTick);
   }
-  $("main").addEventListener("pointermove", (ev) => { if (drag && ev.pointerId === drag.pointerId) { drag.y = ev.clientY; } });
-  function dragEnd(ev) {
-    if (!drag || (ev && ev.pointerId !== drag.pointerId)) return;
+  function dragEnd() {
+    if (!drag) return;
     const d = drag; drag = null;
     cancelAnimationFrame(d.raf);
+    suppressClick = Date.now();
     const before = rowRects();
     d.rows.forEach((r) => { r.style.transform = ""; });
-    d.row.closest(".exlist").classList.remove("sorting");
+    d.row.parentElement.classList.remove("sorting");
     d.row.classList.remove("dragging");
-    const w = cur(), s = curSession();
+    const w = cur();
     if (d.to !== d.from) {
-      const [moved] = s.exercises.splice(d.from, 1);
-      s.exercises.splice(d.to, 0, moved);
+      if (d.kind === "ex") {
+        const s = curSession(), list = exDisplay(s).map((i) => s.exercises[i]);
+        list.splice(d.from, 1); list.splice(d.to, 0, d.item);
+        if (d.item.done) list.filter((x) => x.done).forEach((x, i) => { x.doneSeq = i + 1; });
+        else s.exercises = moveInPlan(s.exercises, d.item, list.filter((x) => !x.done));
+      } else {
+        const list = sessDisplay(w).map((i) => w.sessions[i]);
+        list.splice(d.from, 1); list.splice(d.to, 0, d.item);
+        w.sessions = moveInPlan(w.sessions, d.item, list.filter((x) => !sessionDone(x)));
+      }
       touch(w);
     }
+    if (deferredRender) { deferredRender = false; rebuild(); }
     render(); flip(before);
   }
-  $("main").addEventListener("pointerup", dragEnd);
-  $("main").addEventListener("pointercancel", dragEnd);
+  // exercises: grip responds immediately
+  $("main").addEventListener("pointerdown", (ev) => {
+    const g = ev.target.closest(".grip");
+    if (!g || drag || scrub || !curSession()) return;
+    ev.preventDefault();
+    if (beginDrag(g.closest(".exr"), ev.clientY, "ex")) { drag.pointerId = ev.pointerId; g.setPointerCapture(ev.pointerId); }
+  });
+  $("main").addEventListener("pointermove", (ev) => { if (drag && drag.kind === "ex" && ev.pointerId === drag.pointerId) drag.y = ev.clientY; });
+  $("main").addEventListener("pointerup", (ev) => { if (drag && drag.kind === "ex") dragEnd(); });
+  $("main").addEventListener("pointercancel", (ev) => { if (drag && drag.kind === "ex") dragEnd(); });
+  // sessions: press and hold, then drag
+  function holdStart(card, x, y) {
+    if (drag || view !== "week") return;
+    hold = { card, x, y, timer: setTimeout(() => { const h = hold; hold = null; if (h) beginDrag(h.card, h.y, "ses"); }, 320) };
+  }
+  function holdMove(x, y, ev) {
+    if (hold && (Math.abs(x - hold.x) > 8 || Math.abs(y - hold.y) > 8)) { clearTimeout(hold.timer); hold = null; }
+    if (drag && drag.kind === "ses") { if (ev.cancelable) ev.preventDefault(); drag.y = y; }
+  }
+  function holdEnd() {
+    if (hold) { clearTimeout(hold.timer); hold = null; }
+    if (drag && drag.kind === "ses") dragEnd();
+  }
+  $("main").addEventListener("touchstart", (ev) => { const c = ev.target.closest(".scard"); if (c && ev.touches.length === 1) holdStart(c, ev.touches[0].clientX, ev.touches[0].clientY); }, { passive: true });
+  document.addEventListener("touchmove", (ev) => holdMove(ev.touches[0].clientX, ev.touches[0].clientY, ev), { passive: false });
+  document.addEventListener("touchend", holdEnd);
+  document.addEventListener("touchcancel", holdEnd);
+  $("main").addEventListener("mousedown", (ev) => { const c = ev.target.closest(".scard"); if (c && ev.button === 0) holdStart(c, ev.clientX, ev.clientY); });
+  document.addEventListener("mousemove", (ev) => holdMove(ev.clientX, ev.clientY, ev));
+  document.addEventListener("mouseup", holdEnd);
+  $("main").addEventListener("contextmenu", (ev) => { if (ev.target.closest(".scard")) ev.preventDefault(); });
 
   // ---------- hold-and-drag on a number ----------
   const HOLD = 160, STEP = 14;
@@ -1376,7 +1449,7 @@
     const i = Math.min(scrub.vals.length - 1, Math.max(0, scrub.start + Math.round((scrub.y - y) / STEP)));
     if (i !== scrub.idx) {
       scrub.idx = i; scrub.val = scrub.vals[i]; scrub.moved = true;
-      scrub.el.textContent = halfText(scrub.val, scrub.f);
+      scrub.el.textContent = halfText(scrub.val, scrub.f, "x");
       buzz(3);
       showBubble();
     }
