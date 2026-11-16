@@ -126,7 +126,7 @@
   .pane .h-sub { margin-bottom: 4px; }
 
   /* Home stats */
-  .stats { margin-top: 20px; display: grid; gap: 12px; }
+  .stats { margin: 4px 0 22px; display: grid; gap: 12px; }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .tile { background: var(--surface-c); border-radius: 24px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; }
   .tl { font-size: 13px; color: var(--muted); }
@@ -882,7 +882,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.14"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.15"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -1037,8 +1037,7 @@
       ? `<div class="section"><button class="primary" data-act="newweek">Start Week ${esc((w.num ?? 0) + 1)}</button></div>`
       : `<div class="section"><button class="primary" data-act="golatest">Back to Week ${esc(latest().num ?? "")}</button></div>`;
     h += `<div style="display:flex;justify-content:center;gap:8px;margin-top:8px"><button class="linkbtn" style="margin:0" data-act="weekmenu">Week settings</button><button class="linkbtn" style="margin:0;color:var(--error)" data-act="delweek">Delete this week</button></div>`;
-    h += statsHTML(w);
-    return h;
+    return statsHTML(w) + h;
   }
 
   // ---------- home-screen stats (all as of the week being shown) ----------
