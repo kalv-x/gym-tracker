@@ -125,6 +125,28 @@
   .wchev:disabled { opacity: .3; }
   .pane .h-sub { margin-bottom: 4px; }
 
+  /* Home stats */
+  .stats { margin-top: 20px; display: grid; gap: 12px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tile { background: var(--surface-c); border-radius: 24px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; }
+  .tl { font-size: 13px; color: var(--muted); }
+  .tv { font-size: 34px; line-height: 1.1; font-weight: 500; color: var(--primary); font-variant-numeric: tabular-nums; }
+  .tv small { font-size: 15px; color: var(--muted); font-weight: 400; }
+  .scard2 { background: var(--surface-c); border-radius: 24px; padding: 16px 18px 12px; }
+  .st { display: flex; justify-content: space-between; align-items: baseline; font-weight: 500; margin-bottom: 12px; }
+  .st .sm { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .hgrid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 4px; }
+  .hcol { display: grid; gap: 4px; }
+  .hcol i { aspect-ratio: 1; border-radius: 5px; background: var(--outline-variant); opacity: .45; }
+  .hcol i.on { background: var(--primary); opacity: 1; }
+  .hcol:not(.me) i.on { opacity: .62; }
+  .vbars { display: flex; align-items: flex-end; gap: 5px; height: 84px; }
+  .vbar { flex: 1; height: var(--h); border-radius: 6px 6px 3px 3px; background: var(--primary); opacity: .45; transform-origin: bottom; }
+  .intro .vbar { animation: grow .6s var(--spring) both; }
+  .vbar.me { opacity: 1; }
+  @keyframes grow { from { transform: scaleY(0); } }
+  .axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 8px; }
+
   /* Gym switch */
   .gymbar { display: flex; gap: 8px; align-items: center; }
   .gymbar .gyms { flex: 1; min-width: 0; }
@@ -860,7 +882,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.13"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.14"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -1015,10 +1037,70 @@
       ? `<div class="section"><button class="primary" data-act="newweek">Start Week ${esc((w.num ?? 0) + 1)}</button></div>`
       : `<div class="section"><button class="primary" data-act="golatest">Back to Week ${esc(latest().num ?? "")}</button></div>`;
     h += `<div style="display:flex;justify-content:center;gap:8px;margin-top:8px"><button class="linkbtn" style="margin:0" data-act="weekmenu">Week settings</button><button class="linkbtn" style="margin:0;color:var(--error)" data-act="delweek">Delete this week</button></div>`;
+    h += statsHTML(w);
     return h;
   }
 
-  function renderWeek() {
+  // ---------- home-screen stats (all as of the week being shown) ----------
+  const isDone = (x) => !!x.day && !x.missed;
+  function sessDate(w, x) { const d = parseDate(w.start); d.setDate(d.getDate() + Math.max(0, DAYS.indexOf(x.day))); return d; }
+  function weekVolume(w) {
+    let kg = 0;
+    w.sessions.filter(isDone).forEach((x) => {
+      const ex = named(x), ticked = ex.filter((e) => e.done);
+      (ticked.length ? ticked : ex).forEach((e) => e.sets.forEach((st) => { const a = parseFloat(st.w), b = parseFloat(st.r); if (a > 0 && b > 0) kg += a * b; }));
+    });
+    return kg;
+  }
+  const fmtVol = (kg) => kg >= 1000 ? `${(kg / 1000).toFixed(1)} t` : `${Math.round(kg)} kg`;
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const dayKey = (d) => Math.round(d.getTime() / 864e5);
+  // calendar weeks ending at w; a week with nothing logged comes back as null
+  function calWeeks(w, n) {
+    const end = parseDate(w.start), out = [];
+    for (let k = n - 1; k >= 0; k--) {
+      const d = new Date(end); d.setDate(d.getDate() - 7 * k);
+      out.push({ d, w: k === 0 ? w : weeks.find((x) => !x.deleted && Math.abs(dayKey(parseDate(x.start)) - dayKey(d)) <= 3) || null });
+    }
+    return out;
+  }
+  function statsHTML(w) {
+    const isLatest = w === latest(), done = (x) => !!x && x.sessions.some(isDone);
+    // week streak: consecutive calendar weeks with a session; an empty latest week doesn't break it yet
+    const back = calWeeks(w, 260).reverse();
+    let k = isLatest && !done(w) ? 1 : 0, streak = 0;
+    while (k < back.length && done(back[k].w)) { streak++; k++; }
+    // sessions in the month (this month on the latest week, otherwise the month that week started in)
+    const ref = isLatest ? new Date() : parseDate(w.start), m = ref.getMonth(), y = ref.getFullYear();
+    let month = 0;
+    weeks.slice(0, weeks.indexOf(w) + 1).forEach((ww) => ww.sessions.forEach((x) => { if (isDone(x)) { const d = sessDate(ww, x); if (d.getMonth() === m && d.getFullYear() === y) month++; } }));
+    const lbl = (d) => `${d.getDate()} ${MON[d.getMonth()]}`;
+    // consistency grid: last 16 calendar weeks, a filled cell per session done
+    const span = calWeeks(w, 16);
+    const rows = Math.max(4, ...span.map((c) => (c.w ? Math.min(6, c.w.sessions.length) : 0)));
+    let grid = "";
+    span.forEach((c) => {
+      const n = c.w ? c.w.sessions.filter(isDone).length : 0;
+      let col = "";
+      for (let r = rows - 1; r >= 0; r--) col += `<i class="${r < n ? "on" : ""}"></i>`;
+      grid += `<div class="hcol${c.w === w ? " me" : ""}">${col}</div>`;
+    });
+    // weekly volume: last 12 calendar weeks
+    const vs = calWeeks(w, 12), vols = vs.map((c) => (c.w ? weekVolume(c.w) : 0)), max = Math.max(1, ...vols);
+    const bars = vs.map((c, j) => `<div class="vbar${c.w === w ? " me" : ""}" style="--h:${vols[j] ? Math.max(3, (vols[j] / max) * 100) : 0}%"></div>`).join("");
+    return `<div class="stats">
+      <div class="tiles"><div class="tile"><span class="tl">Sessions in ${MON[m]}</span><span class="tv">${month}</span></div>
+      <div class="tile"><span class="tl">Week streak</span><span class="tv">${streak}<small>${streak === 1 ? " week" : " weeks"}</small></span></div></div>
+      <div class="scard2"><div class="st"><span>Consistency</span><span class="sm">last 16 weeks</span></div>
+        <div class="hgrid" style="--cols:16">${grid}</div>
+        <div class="axis"><span>${lbl(span[0].d)}</span><span>${isLatest ? "This week" : lbl(span[15].d)}</span></div></div>
+      <div class="scard2"><div class="st"><span>Weekly volume</span><span class="sm">${fmtVol(vols[vols.length - 1])} ${isLatest ? "this week" : "that week"}</span></div>
+        <div class="vbars">${bars}</div>
+        <div class="axis"><span>${lbl(vs[0].d)}</span><span>${isLatest ? "This week" : lbl(vs[11].d)}</span></div></div>
+    </div>`;
+  }
+
+  function renderWeek(fromSwipe) {
     const w = cur();
     $("header").hidden = true; $("header").innerHTML = ""; // the week title lives inside each page so it slides with it
     if (!w) {
@@ -1029,7 +1111,7 @@
       return;
     }
     const i = weeks.indexOf(w), panes = [weeks[i - 1], w, weeks[i + 1]].filter(Boolean);
-    $("main").innerHTML = `<div class="pager" id="pager">${panes.map((pw) => `<section class="pane${pw === w ? " cur" : ""}" data-wid="${esc(pw.id)}">${weekPane(pw, pw === w)}</section>`).join("")}</div>`;
+    $("main").innerHTML = `<div class="pager${fromSwipe ? "" : " intro"}" id="pager">${panes.map((pw) => `<section class="pane${pw === w ? " cur" : ""}" data-wid="${esc(pw.id)}">${weekPane(pw, pw === w)}</section>`).join("")}</div>`;
     const pager = $("pager");
     pager.scrollLeft = panes.indexOf(w) * pager.clientWidth; // show this week; neighbours sit either side
     showSaved();
@@ -1042,11 +1124,16 @@
       lastBase = hashFor("week", curId);
       location.replace("#" + lastBase); // remember where we are without adding back-button steps
       buzz(6);
-      renderWeek();
+      renderWeek(true);
     };
     pager.addEventListener("scrollend", settle);
     pager.addEventListener("scroll", () => { clearTimeout(t); t = setTimeout(settle, 140); }, { passive: true });
   }
+  // keep the pager lined up on the current week if the window changes size (rotation, split screen)
+  window.addEventListener("resize", () => {
+    const pager = $("pager"), c = pager && pager.querySelector(".pane.cur");
+    if (c) pager.scrollLeft = [...pager.children].indexOf(c) * pager.clientWidth;
+  });
   function pageTo(dir) {
     const pager = $("pager"); if (!pager) return;
     pager.scrollTo({ left: pager.scrollLeft + dir * pager.clientWidth, behavior: "smooth" });
