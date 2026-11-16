@@ -256,13 +256,12 @@
   .cell .half:first-of-type { border-radius: 16px 0 0 16px; }
   .cell .half:last-of-type { border-radius: 0 16px 16px 0; }
   .half { height: 100%; font-variant-numeric: tabular-nums; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; transition: background .15s; }
-  .hw { flex: 1 1 0; min-width: 0; font-weight: 600; font-size: 16px; text-align: right; padding: 0 2px 0 4px; white-space: nowrap; }
-  .hr { flex: 1 1 0; min-width: 0; font-size: 15px; font-weight: 500; color: var(--on-surface-variant); text-align: left; padding: 0 4px 0 1px; white-space: nowrap; }
+  .hw { flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: 16px; text-align: right; padding: 0 1.5px 0 0; white-space: nowrap; }
+  .hr { flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 500; color: var(--on-surface-variant); text-align: left; padding: 0 0 0 1.5px; white-space: nowrap; }
   .exr.done .hr { color: inherit; opacity: .75; }
   .half.sm { font-size: 14.5px; letter-spacing: -.01em; }
   .half.xs { font-size: 12.5px; letter-spacing: -.02em; }
-  .cell.wide .hw { flex: 2.2 1 0; padding-left: 2px; }
-  .cell.wide .hr { font-size: 12.5px; padding-right: 2px; }
+  .cell.wide .hr { font-size: 12.5px; }
   .hw.empty { font-size: 12px; font-weight: 600; letter-spacing: .04em; }
   .half.empty { font-weight: 400; color: var(--on-surface-variant); }
   .half.scrub { background: var(--primary); color: var(--on-primary) !important; opacity: 1 !important; }
@@ -845,7 +844,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.7"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.8"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
