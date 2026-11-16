@@ -282,6 +282,9 @@
   .vextra { display: flex; justify-content: space-between; margin-top: 8px; }
   .vextra button { padding: 12px 4px; font-size: 14px; font-weight: 500; color: var(--primary); }
   .vextra button.danger { color: var(--error); }
+  .snack { position: fixed; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 100px); z-index: 30; max-width: 528px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 6px 8px 6px 18px; min-height: 52px; border-radius: 16px; background: var(--on-surface); color: var(--surface); font-size: 15px; animation: rise .45s var(--spring) both; }
+  .snack span { flex: 1; }
+  .snack button { height: 40px; padding: 0 16px; border-radius: 20px; color: var(--primary-container); font-weight: 600; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>
 </head>
@@ -749,7 +752,8 @@
   }
 
   // ---------- backup ----------
-  const APP_VERSION = "2";
+  const APP_VERSION = "3";
+  const BUILD = "2026-11-16.2"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -795,6 +799,27 @@
       closeModal(() => go("week", { week: latest() ? latest().id : null }));
     });
   });
+
+  // ---------- updates: tell me when a newer version has been pushed ----------
+  let updateShown = false;
+  async function checkForUpdate() {
+    if (updateShown || !navigator.onLine) return;
+    try {
+      const t = await (await fetch("./?check=" + Date.now(), { cache: "no-store" })).text();
+      const m = t.match(/const BUILD = "([^"]+)"/);
+      if (m && m[1] !== BUILD) showUpdateBar();
+    } catch {}
+  }
+  function showUpdateBar() {
+    updateShown = true;
+    const bar = document.createElement("div");
+    bar.className = "snack";
+    bar.innerHTML = `<span>New version available</span><button>Reload</button>`;
+    bar.querySelector("button").onclick = () => { if (saveTimer) writeLocal(); location.reload(); };
+    document.body.appendChild(bar);
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkForUpdate(); });
+  setTimeout(checkForUpdate, 2500);
 
   // ---------- navigation (hash-based so the phone's back gesture works) ----------
   let lastBase = null, pendingEdit = false;
@@ -1025,7 +1050,7 @@
     h = `<div class="section" style="margin-top:16px"><h3>Backup</h3>
       <div class="backup"><div class="bl">Your data is only saved on this phone.<br><span${stale ? ' style="color:var(--accent)"' : ""}>Last backup: ${lastTxt}</span></div>
       <div class="bb"><button class="ebtn" data-act="export">Export</button><button class="ebtn" data-act="import">Import</button></div></div></div>` + h +
-      `<p class="hint" style="text-align:center;margin-top:24px">Gym Tracker · app version ${APP_VERSION}</p>`;
+      `<p class="hint" style="text-align:center;margin-top:24px">Gym Tracker · version ${BUILD}</p>`;
     $("main").innerHTML = h;
   }
 

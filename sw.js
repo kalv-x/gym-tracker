@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION whenever any file other than index.html changes.
-const VERSION = "3";
+const VERSION = "4";
 const CACHE = "gym-" + VERSION;
 const FILES = ["./", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"];
 
@@ -28,6 +28,9 @@ self.addEventListener("fetch", (e) => {
   }
   if (url.origin !== location.origin) return;
 
+  // In-app "is there a newer version?" checks always ask the server.
+  if (url.searchParams.has("check")) { e.respondWith(fetch(req, { cache: "no-store" })); return; }
+
   // The app page: try the network first (so updates arrive), fall back to the saved copy
   // after 3 seconds or when offline — handy with bad gym reception.
   if (req.mode === "navigate") {
@@ -35,7 +38,7 @@ self.addEventListener("fetch", (e) => {
       const cache = await caches.open(CACHE);
       try {
         const res = await Promise.race([
-          fetch(req),
+          fetch(req.url, { cache: "no-cache", credentials: "same-origin" }),
           new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
         ]);
         if (res.ok) cache.put("./", res.clone());
