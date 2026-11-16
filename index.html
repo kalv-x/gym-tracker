@@ -243,6 +243,8 @@
   .exr.done .hr { color: inherit; opacity: .75; }
   .half.sm { font-size: 14.5px; letter-spacing: -.01em; }
   .half.xs { font-size: 12.5px; letter-spacing: -.02em; }
+  .cell.wide .hw { flex: 2.2 1 0; padding-left: 2px; }
+  .cell.wide .hr { font-size: 12.5px; padding-right: 2px; }
   .hw.empty { font-size: 12px; font-weight: 600; letter-spacing: .04em; }
   .half.empty { font-weight: 400; color: var(--on-surface-variant); }
   .half.scrub { background: var(--primary); color: var(--on-primary) !important; opacity: 1 !important; }
@@ -766,7 +768,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.4"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.5"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -958,7 +960,7 @@
         <div class="exr-top"><span class="grip" aria-label="Drag to reorder"><svg viewBox="0 0 12 18" fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg></span><button class="exr-name" data-act="exmenu"><span class="nm">${esc(e.name || "Untitled")}</span><span class="dots">⋯</span></button>
         <button class="tick" data-act="tick" aria-label="Mark ${esc(e.name)} done"><svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></button></div>
         ${e.note ? `<div class="exnote">${esc(e.note)}</div>` : ""}
-        <div class="cells">${e.sets.map((x, k) => { const pr = isPR(e, x, best); return `<div class="cell${pr ? " pr" : ""}" style="grid-area:${Math.floor(k / 4) + 1}/${(k % 4) + 1}">${pr ? `<span class="prb">PR</span>` : ""}${half(x.w, "w", k, x.r)}${half(x.r, "r", k, x.w)}</div>`; }).join("")}<button class="addcell" data-act="addset" aria-label="Add a set" style="grid-area:${Math.max(1, Math.ceil(e.sets.length / 4))}/5">+</button></div></div>`;
+        <div class="cells">${e.sets.map((x, k) => { const pr = isPR(e, x, best); return `<div class="cell${pr ? " pr" : ""}${String(x.w || "").length >= 5 ? " wide" : ""}" style="grid-area:${Math.floor(k / 4) + 1}/${(k % 4) + 1}">${pr ? `<span class="prb">PR</span>` : ""}${half(x.w, "w", k, x.r)}${half(x.r, "r", k, x.w)}</div>`; }).join("")}<button class="addcell" data-act="addset" aria-label="Add a set" style="grid-area:${Math.max(1, Math.ceil(e.sets.length / 4))}/5">+</button></div></div>`;
     });
     if (!s.exercises.length) h += `<div class="empty">No exercises yet.</div>`;
     h += `</div>`;
@@ -1484,6 +1486,24 @@
   document.addEventListener("mousemove", (ev) => { if (scrub) scrubMove(ev.clientX, ev.clientY, ev); });
   document.addEventListener("mouseup", scrubEnd);
   $("main").addEventListener("contextmenu", (ev) => { if (ev.target.closest(".half")) ev.preventDefault(); });
+
+  // ---------- bottom bar follows your scroll (slides away going down, back going up) ----------
+  const nav = document.querySelector("nav.tabs");
+  let lastScrollY = scrollY, navOff = 0, navSnap = null;
+  function navApply(animate) {
+    nav.style.transition = animate ? "transform .3s var(--spring)" : "none";
+    nav.style.transform = navOff ? `translateY(${navOff}px)` : "";
+  }
+  addEventListener("scroll", () => {
+    const y = scrollY, dy = y - lastScrollY;
+    lastScrollY = y;
+    if (drag) return;
+    const h = nav.offsetHeight;
+    navOff = y <= 0 ? 0 : Math.max(0, Math.min(h, navOff + dy));
+    navApply(false);
+    clearTimeout(navSnap); // when scrolling stops, finish the slide one way or the other
+    navSnap = setTimeout(() => { if (navOff && navOff < h) { navOff = navOff > h / 2 ? h : 0; navApply(true); } }, 120);
+  }, { passive: true });
 
   $("tabWeek").onclick = () => go("week", { week: latest() ? latest().id : null });
   $("tabPast").onclick = () => go("past");
