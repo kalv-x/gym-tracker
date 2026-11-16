@@ -311,7 +311,6 @@
   .vnav button:active { border-radius: 16px; }
   .vnav button.go { background: var(--primary); color: var(--on-primary); flex: 1.3; }
   .vnav button:disabled { opacity: .38; }
-  .vhint { font-size: 13px; color: var(--on-surface-variant); text-align: center; min-height: 18px; margin-top: 8px; }
   .vextra { display: flex; justify-content: space-between; margin-top: 8px; }
   .vextra button { padding: 12px 4px; font-size: 14px; font-weight: 500; color: var(--primary); }
   .vextra button.danger { color: var(--error); }
@@ -643,7 +642,6 @@
     let all = allMode;
     const scrim = showSheet(`<div class="vhead"><h2 id="vname"></h2></div>
       <div class="seg" id="vseg"><button id="seg-one"></button><button id="seg-all"></button></div>
-      <div class="vhint" id="vhint"></div>
       <div class="wheels">
         <div class="wcol"><div class="wlab" id="lab-w">Weight (kg)</div><input class="wtype" id="in-w" inputmode="decimal" autocomplete="off"><div class="wheelwrap"><div class="wheel" id="wh-w"></div></div></div>
         <div class="wcol"><div class="wlab" id="lab-r">Reps</div><input class="wtype" id="in-r" inputmode="decimal" autocomplete="off"><div class="wheelwrap"><div class="wheel" id="wh-r"></div></div></div>
@@ -704,7 +702,6 @@
       const mixed = (f2) => !ex().sets.every((x) => x[f2] === ex().sets[0][f2]);
       $("lab-w").textContent = all && mixed("w") ? "Weight · differs" : "Weight (kg)";
       $("lab-r").textContent = all && mixed("r") ? "Reps · differ" : "Reps";
-      $("vhint").textContent = all ? (mixed("w") || mixed("r") ? "Tap a highlighted number to make all sets match." : `Changes apply to all ${n} sets.`) : "";
       $("v-del").textContent = all ? "" : `Delete set ${k + 1}`;
       $("v-del").style.visibility = all ? "hidden" : "visible";
     }
@@ -849,7 +846,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.9"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.10"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
