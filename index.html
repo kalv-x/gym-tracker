@@ -766,7 +766,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.3"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.4"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -926,9 +926,8 @@
 
   function renderSession() {
     const w = cur(), s = curSession(), si = curSi;
-    header(`<button class="back" data-act="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Week ${esc(w.num ?? "")}</button>
-      <div class="h1" style="font-size:21px">${esc(sessionName(s, si))}</div>
-      <div class="h-sub"><span>${weekRange(w)}</span><span id="saved" class="saved"></span></div>`);
+    header(`<div class="h1" style="font-size:24px">${esc(sessionName(s, si))}</div>
+      <div class="h-sub"><span>Week ${esc(w.num ?? "")} · ${weekRange(w)}</span><span id="saved" class="saved"></span></div>`);
     let h = "";
     if (editMode) {
       h += `<div class="label">Session name</div><input class="ein name" data-f="label" value="${esc(s.label)}" placeholder="e.g. Chest, Shoulder, Arms">`;
