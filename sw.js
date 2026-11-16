@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION whenever any file other than index.html changes.
-const VERSION = "2";
+const VERSION = "3";
 const CACHE = "gym-" + VERSION;
 const FILES = ["./", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"];
 
