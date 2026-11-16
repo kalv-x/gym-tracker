@@ -112,6 +112,19 @@
   .chip.on { background: var(--primary); color: var(--on-primary); border-radius: 24px; }
   .chip:active { border-radius: 16px; }
 
+  /* Week pager: native horizontal scrolling with snap, one week per swipe */
+  .pager { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -16px; }
+  .pager::-webkit-scrollbar { display: none; }
+  .pane { flex: 0 0 100%; min-width: 100%; padding: 14px 16px 24px; scroll-snap-align: start; scroll-snap-stop: always; min-height: calc(100vh - 96px); }
+  .wtitle { display: flex; align-items: center; gap: 8px; }
+  .wtitle .h1 { flex: 1; }
+  .wnav { display: flex; gap: 6px; }
+  .wchev { width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center; background: var(--surface-c); color: var(--on-surface); transition: border-radius .3s var(--spring), opacity .2s; }
+  .wchev svg { width: 22px; height: 22px; }
+  .wchev:active { border-radius: 14px; }
+  .wchev:disabled { opacity: .3; }
+  .pane .h-sub { margin-bottom: 4px; }
+
   /* Gym switch */
   .gymbar { display: flex; gap: 8px; align-items: center; }
   .gymbar .gyms { flex: 1; min-width: 0; }
@@ -847,7 +860,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.12"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.13"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -973,27 +986,18 @@
     renderWeek();
   }
 
-  function header(inner) { $("header").innerHTML = inner; showSaved(); }
+  function header(inner) { $("header").hidden = false; $("header").innerHTML = inner; showSaved(); }
 
-  function renderWeek() {
-    const w = cur();
-    if (!w) {
-      header(`<div class="h1">Gym</div><div class="h-sub"><span id="saved" class="saved"></span></div>`);
-      $("main").innerHTML = `<div class="section" style="margin-top:18px"><h3>Welcome</h3>
-        <p style="margin:0 2px 14px">Got a backup file? Import it to bring in all your weeks.</p>
-        <button class="primary" data-act="import">Import backup</button>
-        <button class="secondary" data-act="newweek" style="margin-top:10px">Start from scratch</button></div>`;
-      return;
-    }
-    const isLatest = w === latest();
-    header(`<div class="h1">Week ${esc(w.num ?? "")}</div>
-      <div class="h-sub"><span>${weekRange(w)}</span>${w.tag ? `<span class="tag">${esc(w.tag)}</span>` : ""}<span id="saved" class="saved"></span></div>`);
-    let h = "";
+  function weekPane(w, isCur) {
+    const i = weeks.indexOf(w), older = weeks[i - 1], newer = weeks[i + 1], isLatest = w === latest();
+    let h = `<div class="wtitle"><div class="h1">Week ${esc(w.num ?? "")}</div>
+      <div class="wnav"><button class="wchev" data-act="wprev" aria-label="Previous week" ${older ? "" : "disabled"}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="wchev" data-act="wnext" aria-label="Next week" ${newer ? "" : "disabled"}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div></div>
+      <div class="h-sub"><span>${weekRange(w)}</span>${w.tag ? `<span class="tag">${esc(w.tag)}</span>` : ""}${isCur ? `<span id="saved" class="saved"></span>` : ""}</div>`;
     if (isLatest && weeks.length > 1 && !w.sessions.some((x) => x.day || x.missed || x.exercises.some((e) => e.done)))
       h += `<div class="banner"><span>Started this week by mistake?</span><button data-act="delweek">Delete it</button></div>`;
     h += `<div class="slist">`;
-    sessDisplay(w).forEach((i) => {
-      const s = w.sessions[i], ex = named(s), d = ex.filter((e) => e.done).length;
+    sessDisplay(w).forEach((si) => {
+      const s = w.sessions[si], ex = named(s), d = ex.filter((e) => e.done).length;
       let cls = "", stat;
       if (s.missed) { cls = "missed"; stat = "Missed"; }
       else if (s.day) {
@@ -1004,14 +1008,48 @@
       else if (d) stat = `${d}/${ex.length} exercises`;
       else stat = `${ex.length} exercises`;
       const pct = ex.length ? Math.round((d / ex.length) * 100) : 0;
-      h += `<button class="scard ${cls}" data-act="open" data-si="${i}"><span class="sdot" style="--p:${pct}%"></span><span class="sinfo"><div class="sname">${esc(sessionName(s, i))}</div><div class="sstat">${stat}</div>${s.gym ? `<div class="sgym">${PIN}${esc(s.gym)}</div>` : ""}</span><span class="chev">›</span></button>`;
+      h += `<button class="scard ${cls}" data-act="open" data-si="${si}"><span class="sdot" style="--p:${pct}%"></span><span class="sinfo"><div class="sname">${esc(sessionName(s, si))}</div><div class="sstat">${stat}</div>${s.gym ? `<div class="sgym">${PIN}${esc(s.gym)}</div>` : ""}</span><span class="chev">›</span></button>`;
     });
     h += `</div>`;
     h += isLatest
       ? `<div class="section"><button class="primary" data-act="newweek">Start Week ${esc((w.num ?? 0) + 1)}</button></div>`
       : `<div class="section"><button class="primary" data-act="golatest">Back to Week ${esc(latest().num ?? "")}</button></div>`;
     h += `<div style="display:flex;justify-content:center;gap:8px;margin-top:8px"><button class="linkbtn" style="margin:0" data-act="weekmenu">Week settings</button><button class="linkbtn" style="margin:0;color:var(--error)" data-act="delweek">Delete this week</button></div>`;
-    $("main").innerHTML = h;
+    return h;
+  }
+
+  function renderWeek() {
+    const w = cur();
+    $("header").hidden = true; $("header").innerHTML = ""; // the week title lives inside each page so it slides with it
+    if (!w) {
+      $("main").innerHTML = `<div class="section" style="margin-top:18px"><div class="h1" style="margin-bottom:14px">Gym</div>
+        <p style="margin:0 2px 14px">Got a backup file? Import it to bring in all your weeks.</p>
+        <button class="primary" data-act="import">Import backup</button>
+        <button class="secondary" data-act="newweek" style="margin-top:10px">Start from scratch</button></div>`;
+      return;
+    }
+    const i = weeks.indexOf(w), panes = [weeks[i - 1], w, weeks[i + 1]].filter(Boolean);
+    $("main").innerHTML = `<div class="pager" id="pager">${panes.map((pw) => `<section class="pane${pw === w ? " cur" : ""}" data-wid="${esc(pw.id)}">${weekPane(pw, pw === w)}</section>`).join("")}</div>`;
+    const pager = $("pager");
+    pager.scrollLeft = panes.indexOf(w) * pager.clientWidth; // show this week; neighbours sit either side
+    showSaved();
+    let t = null;
+    const settle = () => {
+      clearTimeout(t);
+      const k = Math.round(pager.scrollLeft / pager.clientWidth), pane = pager.children[k];
+      if (!pane || Math.abs(pager.scrollLeft - k * pager.clientWidth) > 2 || pane.dataset.wid === curId) return;
+      curId = pane.dataset.wid;
+      lastBase = hashFor("week", curId);
+      location.replace("#" + lastBase); // remember where we are without adding back-button steps
+      buzz(6);
+      renderWeek();
+    };
+    pager.addEventListener("scrollend", settle);
+    pager.addEventListener("scroll", () => { clearTimeout(t); t = setTimeout(settle, 140); }, { passive: true });
+  }
+  function pageTo(dir) {
+    const pager = $("pager"); if (!pager) return;
+    pager.scrollTo({ left: pager.scrollLeft + dir * pager.clientWidth, behavior: "smooth" });
   }
 
   function renderSession() {
@@ -1097,13 +1135,14 @@
     const w = cur(); return w && w.sessions[+el.dataset.si];
   }
   const ROWS = ".exr, .scard";
+  const rowRoot = () => $("main").querySelector(".pane.cur") || $("main");
   function rowRects() {
     const m = new Map();
-    $("main").querySelectorAll(ROWS).forEach((el) => { const o = objFor(el); if (o) m.set(o, el.getBoundingClientRect().top); });
+    rowRoot().querySelectorAll(ROWS).forEach((el) => { const o = objFor(el); if (o) m.set(o, el.getBoundingClientRect().top); });
     return m;
   }
   function flip(before) {
-    $("main").querySelectorAll(ROWS).forEach((el) => {
+    rowRoot().querySelectorAll(ROWS).forEach((el) => {
       const e = objFor(el), old = before.get(e);
       if (old == null) return;
       const dy = old - el.getBoundingClientRect().top;
@@ -1328,7 +1367,9 @@
       case "import": return importInput.click();
       case "delweek": return confirmDelete(w);
       case "golatest": slideFrom = 1; return go("week", { week: latest().id, replace: true });
-      case "open": return go("session", { si: +b.dataset.si });
+      case "open": { const pane = b.closest(".pane"); return go("session", { week: pane ? pane.dataset.wid : curId, si: +b.dataset.si }); }
+      case "wprev": return pageTo(-1);
+      case "wnext": return pageTo(1);
       case "openweek": return go("week", { week: b.dataset.id });
       case "back": return go("week");
       case "weekmenu": return weekMenu();
@@ -1395,7 +1436,7 @@
   // Done items stay in the done group; not-done items in the not-done group.
   let drag = null, hold = null;
   function beginDrag(row, y, kind) {
-    const rows = [...$("main").querySelectorAll(kind === "ex" ? ".exr" : ".scard")];
+    const rows = [...row.parentElement.querySelectorAll(kind === "ex" ? ".exr" : ".scard")];
     const from = rows.indexOf(row), item = objFor(row);
     let lo, hi;
     if (kind === "ex") {
@@ -1580,54 +1621,6 @@
   document.addEventListener("mouseup", scrubEnd);
   $("main").addEventListener("contextmenu", (ev) => { if (ev.target.closest(".half")) ev.preventDefault(); });
 
-  // ---------- swipe left/right on the home screen to change week ----------
-  // Swipe right = older week, swipe left = newer. Starts away from the screen edges so
-  // Android's back gesture still works.
-  let sw = null;
-  $("main").addEventListener("touchstart", (ev) => {
-    if (view !== "week" || drag || ev.touches.length !== 1) return;
-    const t = ev.touches[0];
-    if (t.clientX < 28 || t.clientX > innerWidth - 28) return;
-    sw = { x: t.clientX, y: t.clientY, t: Date.now(), dx: 0, locked: false };
-  }, { passive: true });
-  document.addEventListener("touchmove", (ev) => {
-    if (!sw) return;
-    const t = ev.touches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
-    if (!sw.locked) {
-      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.3) {
-        sw.locked = true;
-        if (hold) { clearTimeout(hold.timer); hold = null; }
-        const i = weeks.findIndex((w) => w.id === curId);
-        sw.older = weeks[i - 1]; sw.newer = weeks[i + 1];
-      } else if (Math.abs(dy) > 10) { sw = null; return; }
-      else return;
-    }
-    if (ev.cancelable) ev.preventDefault();
-    const target = dx > 0 ? sw.older : sw.newer;
-    sw.dx = target ? dx : dx * 0.25; // resist when there's no week that way
-    const m = $("main");
-    m.style.transition = "none";
-    m.style.transform = `translateX(${sw.dx}px)`;
-    m.style.opacity = String(1 - Math.min(0.5, Math.abs(sw.dx) / innerWidth));
-  }, { passive: false });
-  function swipeEnd() {
-    if (!sw) return;
-    const s0 = sw; sw = null;
-    if (!s0.locked) return;
-    suppressClick = Date.now();
-    const m = $("main"), dx = s0.dx, v = Math.abs(dx) / Math.max(1, Date.now() - s0.t);
-    const target = dx > 0 ? s0.older : s0.newer;
-    if (target && (Math.abs(dx) > innerWidth * 0.22 || v > 0.5)) {
-      buzz(8);
-      m.animate([{ transform: `translateX(${dx}px)`, opacity: m.style.opacity }, { transform: `translateX(${Math.sign(dx) * innerWidth * 0.5}px)`, opacity: 0 }], { duration: 160, easing: "ease-in", fill: "forwards" })
-        .onfinish = (a) => { slideFrom = -Math.sign(dx); go("week", { week: target.id, replace: true }); m.getAnimations().forEach((x) => x.cancel()); };
-    } else {
-      m.style.transition = "transform .35s cubic-bezier(.2,.9,.25,1.2), opacity .25s";
-      m.style.transform = ""; m.style.opacity = "";
-    }
-  }
-  document.addEventListener("touchend", swipeEnd);
-  document.addEventListener("touchcancel", swipeEnd);
 
   // ---------- bottom bar follows your scroll (slides away going down, back going up) ----------
   const nav = document.querySelector("nav.tabs");
