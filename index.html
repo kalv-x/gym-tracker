@@ -103,12 +103,30 @@
 
   /* Day picker: connected button group */
   .label { font-size: 14px; font-weight: 500; color: var(--on-surface-variant); margin: 8px 4px 8px; }
+  .gymbar + .label { margin-top: 14px; }
   .days { display: flex; gap: 2px; }
   .chip { flex: 1 1 0; min-width: 0; height: 48px; font-size: 14px; font-weight: 500; background: var(--surface-highest); color: var(--on-surface-variant); border-radius: 8px; transition: border-radius .35s var(--spring), background .2s, color .2s; }
   .chip:first-child { border-radius: 24px 8px 8px 24px; }
   .chip:last-child { border-radius: 8px 24px 24px 8px; }
   .chip.on { background: var(--primary); color: var(--on-primary); border-radius: 24px; }
   .chip:active { border-radius: 16px; }
+
+  /* Gym switch */
+  .gymbar { display: flex; gap: 8px; align-items: center; }
+  .gymbar .gyms { flex: 1; min-width: 0; }
+  .gymbar .chip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 8px; }
+  .gadd { width: 48px; height: 48px; flex: 0 0 auto; border-radius: 24px; background: var(--secondary-container); color: var(--on-secondary-container); font-size: 22px; line-height: 1; transition: border-radius .3s var(--spring); }
+  .gadd:active { border-radius: 14px; }
+  .sgym { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--on-surface-variant); }
+  .scard.done .sgym { color: inherit; opacity: .85; }
+  .sgym .pin { width: 14px; height: 14px; flex: 0 0 auto; }
+  .gymrow { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 18px; background: var(--surface-highest); border-radius: 6px; }
+  .menu .gymrow:first-child { border-radius: 20px 20px 6px 6px; }
+  .menu .gymrow:last-child { border-radius: 6px 6px 20px 20px; }
+  .menu .gymrow:only-child { border-radius: 20px; }
+  .gymrow .pin { width: 18px; height: 18px; color: var(--on-surface-variant); }
+  .gymrow span { flex: 1; font-weight: 500; }
+  .menu .gymrow button { width: auto; padding: 8px 14px; border-radius: 16px; background: transparent; color: var(--error); font-size: 14px; }
 
   /* Edit mode */
   .ex { background: var(--surface-c); border-radius: 24px; padding: 14px; margin: 10px 0; }
@@ -538,18 +556,21 @@
     for (const w of weeks.slice(-12)) for (const s of w.sessions) for (const e of s.exercises) addName(e.name);
     return [...map.values()];
   }
-  function lastLogged() { // key -> most recent logged sets
-    const m = new Map();
+  function lastLogged(gym) { // key -> most recent logged sets, preferring this gym
+    const any = new Map(), here = new Map();
     for (const w of weeks) for (const s of w.sessions) if (sessionDone(s)) for (const e of s.exercises) {
       const sets = (e.sets || []).filter((x) => x.w || x.r);
-      if (sets.length) m.set(key(e.name), { sets, week: w });
+      if (!sets.length) continue;
+      any.set(key(e.name), { sets, week: w });
+      if (gym && s.gym === gym) here.set(key(e.name), { sets, week: w });
     }
-    return m;
+    for (const [k, v] of here) any.set(k, v);
+    return any;
   }
 
   function openPicker() {
     const s = curSession(), w = cur();
-    const last = lastLogged();
+    const last = lastLogged(s.gym);
     let q = "", newGroup = null;
     const inSession = () => new Set(s.exercises.map((e) => key(e.name)));
     function list() {
@@ -766,14 +787,48 @@
     });
   }
 
+  // ---------- gyms ----------
+  // Each exercise keeps the weights you last used at each gym in e.byGym; e.sets is what's
+  // showing now, for the session's gym (s.gym).
+  const GYM_KEY = "gymtracker.gyms.v1";
+  let gyms = (() => { try { const g = JSON.parse(localStorage.getItem(GYM_KEY) || "null"); if (Array.isArray(g) && g.length) return g; } catch {} return ["Alexandria", "Waterloo"]; })();
+  function saveGyms() { try { localStorage.setItem(GYM_KEY, JSON.stringify(gyms)); } catch {} }
+  const PIN = `<svg class="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>`;
+  function switchGym(w, s, g) {
+    if (s.gym === g) return;
+    s.exercises.forEach((e) => {
+      e.byGym = e.byGym || {};
+      if (s.gym) e.byGym[s.gym] = clone(e.sets);   // remember this gym's numbers
+      if (e.byGym[g]) e.sets = clone(e.byGym[g]);  // bring back the other gym's; a new gym keeps the current ones
+    });
+    s.gym = g;
+    touch(w);
+  }
+  function gymSheet(fromSession) {
+    openModal(`<h2>Gyms</h2><div class="meta">Each gym remembers its own weights. A new gym starts with the weights you're on now, until you change them.</div>
+      <div class="menu">${gyms.map((g) => `<div class="gymrow">${PIN}<span>${esc(g)}</span>${gyms.length > 1 ? `<button data-m="rm:${esc(g)}">Remove</button>` : ""}</div>`).join("")}</div>
+      <label>Add a gym</label><input type="text" id="f-gym" placeholder="Gym name" autocomplete="off">
+      <div class="actions"><button data-m="close">Close</button><button class="go" data-m="add">Add gym</button></div>`, (a) => {
+      if (a === "close") return closeModal();
+      if (a.startsWith("rm:")) { gyms = gyms.filter((g) => g !== a.slice(3)); saveGyms(); render(); return gymSheet(fromSession); }
+      if (a === "add") {
+        const name = $("f-gym").value.trim();
+        if (!name) return $("f-gym").focus();
+        if (!gyms.some((g) => g.toLowerCase() === name.toLowerCase())) { gyms.push(name); saveGyms(); }
+        const g = gyms.find((x) => x.toLowerCase() === name.toLowerCase());
+        closeModal(() => { const w = cur(), s = curSession(); if (fromSession && s) switchGym(w, s, g); render(); });
+      }
+    });
+  }
+
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.5"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-16.6"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
     if (saveTimer) writeLocal();
-    const data = { app: "gym-tracker", version: 1, exportedAt: new Date().toISOString(), weeks: weeks.map(clone), customLib: clone(customLib) };
+    const data = { app: "gym-tracker", version: 1, exportedAt: new Date().toISOString(), weeks: weeks.map(clone), customLib: clone(customLib), gyms: clone(gyms) };
     const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -807,6 +862,7 @@
       overrides = {};
       for (const w of ready) { w.updatedAt = w.updatedAt || Date.now(); overrides[w.id] = w; }
       customLib = Array.isArray(data.customLib) ? data.customLib.filter((x) => x && x.name && x.group) : [];
+      if (Array.isArray(data.gyms) && data.gyms.length) { gyms = data.gyms.filter((g) => typeof g === "string" && g.trim()); saveGyms(); }
       try { localStorage.setItem(LIB_KEY, JSON.stringify(customLib)); } catch {}
       try { const t = Date.parse(data.exportedAt); localStorage.setItem(EXP_KEY, String(isNaN(t) ? Date.now() : t)); } catch {}
       writeLocal();
@@ -915,7 +971,7 @@
       else if (d) stat = `In progress · ${d}/${ex.length} exercises`;
       else stat = `Not done yet · ${ex.length} exercises`;
       const pct = ex.length ? Math.round((d / ex.length) * 100) : 0;
-      h += `<button class="scard ${cls}" data-act="open" data-si="${i}"><span class="sdot" style="--p:${pct}%"></span><span class="sinfo"><div class="sname">${esc(sessionName(s, i))}</div><div class="sstat">${stat}</div></span><span class="chev">›</span></button>`;
+      h += `<button class="scard ${cls}" data-act="open" data-si="${i}"><span class="sdot" style="--p:${pct}%"></span><span class="sinfo"><div class="sname">${esc(sessionName(s, i))}</div><div class="sstat">${stat}</div>${s.gym ? `<div class="sgym">${PIN}${esc(s.gym)}</div>` : ""}</span><span class="chev">›</span></button>`;
     });
     h += `</div>`;
     if (isLatest) {
@@ -947,12 +1003,13 @@
       return;
     }
     if (s.missed) h += `<div class="banner"><span>Marked as missed.</span><button data-act="unmiss">Undo</button></div>`;
+    h += `<div class="label">Gym</div><div class="gymbar"><div class="days gyms">${gyms.map((g) => `<button class="chip${s.gym === g ? " on" : ""}" data-act="gym" data-gym="${esc(g)}">${esc(g)}</button>`).join("")}</div><button class="gadd" data-act="addgym" aria-label="Add or remove gyms">+</button></div>`;
     h += `<div class="label">Trained on</div><div class="days compact">` +
       DAYS.map((d) => `<button class="chip${s.day === d && !s.missed ? " on" : ""}" data-act="day" data-day="${d}">${d}</button>`).join("") + `</div>`;
     h += `<p class="hint" style="margin:12px 4px 0">Tap a number to edit it, or hold and drag.</p>`;
     const named = s.exercises.filter((x) => x.name.trim()), ndone = named.filter((x) => x.done).length;
     if (named.length) h += `<div class="progress${ndone === named.length ? " full" : ""}"><div class="pt"><span>${ndone === named.length ? "Session complete" : "Progress"}</span><span>${ndone} of ${named.length} done</span></div>${waveSVG(ndone / named.length, ndone === named.length)}</div>`;
-    const best = bestBefore(w);
+    const best = bestBefore(w, s.gym);
     h += `<div class="exlist">`;
     exDisplay(s).forEach((ei) => {
       const e = s.exercises[ei];
@@ -970,11 +1027,11 @@
   }
 
   // Heaviest weight per exercise from completed sessions in earlier weeks
-  function bestBefore(week) {
+  function bestBefore(week, gym) {
     const m = new Map();
     for (const w of weeks) {
       if (w.start >= week.start) continue;
-      for (const s of w.sessions) if (sessionDone(s)) for (const e of s.exercises) for (const x of e.sets || []) {
+      for (const s of w.sessions) if (sessionDone(s) && !(gym && s.gym && s.gym !== gym)) for (const e of s.exercises) for (const x of e.sets || []) {
         const v = num(x.w); if (isNaN(v)) continue;
         const k = key(e.name); if (!m.has(k) || v > m.get(k)) m.set(k, v);
       }
@@ -1137,7 +1194,7 @@
       h += `<div class="meta" style="margin-top:0">Heaviest weight each time (last ${pts.length}): ${mn} to ${mx}</div>`;
     }
     for (const x of hist) {
-      h += `<div class="hrow"><div class="hd">${fmtDate(x.week.start)} · Week ${esc(x.week.num ?? "?")}${x.session.day ? " · " + DAY_FULL[x.session.day] : ""}</div>
+      h += `<div class="hrow"><div class="hd">${fmtDate(x.week.start)} · Week ${esc(x.week.num ?? "?")}${x.session.day ? " · " + DAY_FULL[x.session.day] : ""}${x.session.gym ? " · " + esc(x.session.gym) : ""}</div>
         <div class="hs">${esc(x.sets.map(setText).join(",  "))}</div>${x.ex.note ? `<div class="hd" style="margin:3px 0 0">${esc(x.ex.note)}</div>` : ""}</div>`;
     }
     h += `<div class="actions"><button data-m="close">Close</button></div>`;
@@ -1219,7 +1276,8 @@
       id: "w" + iso(start) + "-" + uid(),
       num: last && last.num != null ? last.num + 1 : 1,
       start: iso(start), tag: "",
-      sessions: last ? clone(last.sessions).map((s) => ({ ...s, day: "", missed: false, note: "", exercises: s.exercises.map((e) => ({ ...e, done: false, note: "", doneSeq: undefined })) })) : [],
+      sessions: last ? clone(last.sessions).map((s) => ({ ...s, day: "", missed: false, note: "",
+        exercises: s.exercises.map((e) => ({ ...e, done: false, note: "", doneSeq: undefined, byGym: s.gym ? { ...(e.byGym || {}), [s.gym]: clone(e.sets) } : e.byGym })) })) : [],
     };
     touch(w); rebuild(); go("week", { week: w.id });
   }
@@ -1272,6 +1330,10 @@
       case "addset": { const l = e.sets[e.sets.length - 1]; e.sets.push(l ? { ...l } : { w: "", r: "" }); break; }
       case "delset": e.sets.pop(); break;
       case "pick": return openPicker();
+      case "gym": { const before = rowRects(); switchGym(w, s, b.dataset.gym); render(); flip(before); buzz(8);
+        $("main").querySelectorAll(".cell").forEach((c) => c.animate([{ opacity: .3, transform: "scale(.94)" }, { opacity: 1, transform: "none" }], { duration: 300, easing: "cubic-bezier(.2,.8,.2,1)" }));
+        return; }
+      case "addgym": return gymSheet(true);
       case "rmex": return confirmRemove(e);
       case "delex": return confirmRemove(e);
       case "up": { const i = s.exercises.indexOf(e); if (i > 0) [s.exercises[i - 1], s.exercises[i]] = [s.exercises[i], s.exercises[i - 1]]; break; }
