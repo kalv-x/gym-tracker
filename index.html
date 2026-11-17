@@ -17,7 +17,7 @@
   :root {
     --primary: #0061a4; --on-primary: #ffffff; --primary-container: #d1e4ff; --on-primary-container: #00497d;
     --secondary-container: #d7e3f7; --on-secondary-container: #3b4858;
-    --tertiary: #7a5900; --tertiary-container: #ffdea3; --on-tertiary-container: #5c4200;
+    --tertiary: #7a5900; --on-tertiary: #ffffff; --tertiary-container: #ffdea3; --on-tertiary-container: #5c4200;
     --surface: #f8f9ff; --surface-lowest: #ffffff; --surface-low: #f2f3fa; --surface-c: #eceef4; --surface-high: #e6e8ee; --surface-highest: #e0e2e8;
     --on-surface: #1a1c1e; --on-surface-variant: #43474e; --outline: #73777f; --outline-variant: #c3c7cf;
     --success: #1f7a43; --on-success: #ffffff; --success-container: #c4eed0; --on-success-container: #0b3d1c;
@@ -33,7 +33,7 @@
     :root {
       --primary: #9ecaff; --on-primary: #003258; --primary-container: #00497d; --on-primary-container: #d1e4ff;
       --secondary-container: #2c3a4c; --on-secondary-container: #d7e3f7;
-      --tertiary: #f7be48; --tertiary-container: #5c4200; --on-tertiary-container: #ffdea3;
+      --tertiary: #f7be48; --on-tertiary: #402d00; --tertiary-container: #5c4200; --on-tertiary-container: #ffdea3;
       --surface: #121316; --surface-lowest: #0d0e11; --surface-low: #1a1c1f; --surface-c: #1f2023; --surface-high: #292a2d; --surface-highest: #343538;
       --on-surface: #e2e2e6; --on-surface-variant: #c3c6cf; --outline: #8d9199; --outline-variant: #43474e;
       --success: #7ad99a; --on-success: #003919; --success-container: #1f4d2e; --on-success-container: #b6f2c6;
@@ -267,6 +267,15 @@
   .exlist .exr:first-child { border-radius: 28px 28px 8px 8px; }
   .exlist .exr:last-child { border-radius: 8px 8px 28px 28px; }
   .exlist .exr:only-child { border-radius: 28px; }
+  .exlist .exr.gend { border-bottom-left-radius: 28px; border-bottom-right-radius: 28px; }
+  .exlist .exr.gstart { border-top-left-radius: 28px; border-top-right-radius: 28px; }
+  .bonus { display: inline-flex; align-items: center; vertical-align: 2px; margin-left: 8px; padding: 1px 9px; border-radius: 10px; background: var(--tertiary); color: var(--on-tertiary); font-size: 13px; font-weight: 600; line-height: 20px; animation: pop .45s var(--spring) both; }
+  @keyframes pop { from { transform: scale(.4); opacity: 0; } }
+  .progress .pt .bonus { vertical-align: 0; }
+  .exsep { font-size: 13px; font-weight: 500; color: var(--on-surface-variant); margin: 18px 6px 6px; }
+  .exr.rest { opacity: .6; transition: opacity .2s, background .3s, border-radius .35s var(--spring); }
+  .exr.rest:active, .exr.rest.dragging { opacity: 1; }
+  .exlist.sorting .exsep { opacity: 0; }
   .exr.done { background: var(--success-container); color: var(--on-success-container); }
   .exr-top { display: flex; align-items: center; gap: 2px; }
   .exr-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; text-align: left; min-height: 44px; }
@@ -410,6 +419,32 @@
   function key(name) { return String(name || "").toLowerCase().replace(/\([^)]*\)/g, "").replace(/[^a-z0-9]/g, "").replace(/s$/, ""); }
   const sessionDone = (s) => !s.missed && !!s.day;
   const named = (s) => s.exercises.filter((e) => e.name.trim());
+  // "Usual" = median number of exercises ticked in your last 6 finished sessions with the same name
+  // (earlier weeks only), rounded down so a normal day reaches it. No history yet: the whole list.
+  function usualGoal(w, s) {
+    const total = named(s).length, k = key(s.label);
+    if (!k) return total;
+    const counts = [];
+    for (let i = weeks.indexOf(w) - 1; i >= 0 && counts.length < 6; i--) {
+      const ws = weeks[i]; if (ws.deleted) continue;
+      for (let j = ws.sessions.length - 1; j >= 0 && counts.length < 6; j--) {
+        const x = ws.sessions[j];
+        if (!sessionDone(x) || key(x.label) !== k) continue;
+        const n = named(x).filter((e) => e.done).length;
+        if (n) counts.push(n);
+      }
+    }
+    if (!counts.length) return total;
+    counts.sort((a, b) => a - b);
+    const mid = counts.length >> 1, med = counts.length % 2 ? counts[mid] : (counts[mid - 1] + counts[mid]) / 2;
+    return Math.max(1, Math.min(total || 1, Math.floor(med)));
+  }
+  const bonusPill = (n) => (n > 0 ? `<span class="bonus">+${n}</span>` : "");
+  function sessionVolume(s) {
+    let kg = 0;
+    named(s).filter((e) => e.done).forEach((e) => e.sets.forEach((st) => { const a = parseFloat(st.w), b = parseFloat(st.r); if (a > 0 && b > 0) kg += a * b; }));
+    return kg;
+  }
   const sessionName = (s, i) => s.label || "Session " + (i + 1);
 
   function normaliseArchiveWeek(w) {
@@ -883,7 +918,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-16.17"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-17.1"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -1026,12 +1061,13 @@
       else if (s.day) {
         cls = "done";
         const dt = parseDate(w.start); dt.setDate(dt.getDate() + Math.max(0, DAYS.indexOf(s.day)));
-        stat = `${DAY_FULL[s.day] || s.day} ${fmtDate(dt)} · ${d}/${ex.length} exercises`;
+        const vol = sessionVolume(s);
+        stat = `${DAY_FULL[s.day] || s.day} ${fmtDate(dt)} · ${d} exercise${d === 1 ? "" : "s"}${vol ? ` · ${fmtVol(vol)}` : ""}`;
       }
-      else if (d) stat = `${d}/${ex.length} exercises`;
+      else if (d) { const g = usualGoal(w, s); stat = d >= g ? `Usual ${g} reached` : `${d} of your usual ${g}`; }
       else stat = `${ex.length} exercises`;
-      const pct = ex.length ? Math.round((d / ex.length) * 100) : 0;
-      h += `<button class="scard ${cls}" data-act="open" data-si="${si}"><span class="sdot" style="--p:${pct}%"></span><span class="sinfo"><div class="sname">${esc(sessionName(s, si))}</div><div class="sstat">${stat}</div>${s.gym ? `<div class="sgym">${PIN}${esc(s.gym)}</div>` : ""}</span><span class="chev">›</span></button>`;
+      const pct = d ? Math.min(100, Math.round((d / usualGoal(w, s)) * 100)) : 0;
+      h += `<button class="scard ${cls}" data-act="open" data-si="${si}"><span class="sdot" style="--p:${pct}%"></span><span class="sinfo"><div class="sname">${esc(sessionName(s, si))}${bonusPill(d - (d && !s.missed ? usualGoal(w, s) : d))}</div><div class="sstat">${stat}</div>${s.gym ? `<div class="sgym">${PIN}${esc(s.gym)}</div>` : ""}</span><span class="chev">›</span></button>`;
     });
     h += `</div>`;
     h += isLatest
@@ -1167,12 +1203,17 @@
     h += `<div class="days compact daysrow">` +
       DAYS.map((d) => `<button class="chip${s.day === d && !s.missed ? " on" : ""}" data-act="day" data-day="${d}">${d}</button>`).join("") + `</div>`;
     const named = s.exercises.filter((x) => x.name.trim()), ndone = named.filter((x) => x.done).length;
-    if (named.length) h += `<div class="progress${ndone === named.length ? " full" : ""}"><div class="pt"><span>${ndone === named.length ? "Session complete" : `${ndone} of ${named.length} done`}</span></div>${waveSVG(ndone / named.length, ndone === named.length)}</div>`;
+    const goal = usualGoal(w, s), hit = ndone >= goal && ndone > 0;
+    if (named.length) h += `<div class="progress${hit ? " full" : ""}"><div class="pt"><span>${hit ? `Usual ${goal} reached` : ndone ? `${ndone} of your usual ${goal}` : `Your usual is ${goal} of ${named.length}`}</span>${bonusPill(ndone - goal)}</div>${waveSVG(Math.min(1, ndone / goal), hit)}</div>`;
     const best = bestBefore(w, s.gym);
     h += `<div class="exlist">`;
-    exDisplay(s).forEach((ei) => {
+    const disp = exDisplay(s), finished = sessionDone(s), firstRest = disp.findIndex((i) => !s.exercises[i].done);
+    const split = finished && firstRest > 0;
+    disp.forEach((ei, n) => {
       const e = s.exercises[ei];
-      h += `<div class="exr${e.done ? " done" : ""}" data-ei="${ei}">
+      if (split && n === firstRest) h += `<div class="exsep">Also in this session</div>`;
+      const g = split ? (n === firstRest - 1 ? " gend" : n === firstRest ? " gstart" : "") + (n >= firstRest ? " rest" : "") : "";
+      h += `<div class="exr${e.done ? " done" : ""}${g}" data-ei="${ei}">
         <div class="exr-top"><span class="grip" aria-label="Drag to reorder"><svg viewBox="0 0 12 18" fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg></span><button class="exr-name" data-act="exmenu"><span class="nm">${esc(e.name || "Untitled")}</span><span class="dots">⋯</span></button>
         <button class="tick" data-act="tick" aria-label="Mark ${esc(e.name)} done"><svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></button></div>
         ${e.note ? `<div class="exnote">${esc(e.note)}</div>` : ""}
