@@ -918,7 +918,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-17.1"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-17.2"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -1141,7 +1141,8 @@
 
   function renderWeek(fromSwipe) {
     const w = cur();
-    $("header").hidden = true; $("header").innerHTML = ""; // the week title lives inside each page so it slides with it
+    $("header").hidden = true; $("header").innerHTML = "";
+    if (navOff) { navOff = 0; navApply(true); } // bottom bar always shows on the home screen // the week title lives inside each page so it slides with it
     if (!w) {
       $("main").innerHTML = `<div class="section" style="margin-top:18px"><div class="h1" style="margin-bottom:14px">Gym</div>
         <p style="margin:0 2px 14px">Got a backup file? Import it to bring in all your weeks.</p>
@@ -1764,6 +1765,7 @@
     const y = scrollY, dy = y - lastScrollY;
     lastScrollY = y;
     if (drag) return;
+    if (view === "week") { if (navOff) { navOff = 0; navApply(true); } return; } // pinned on the home screen
     const h = nav.offsetHeight;
     navOff = y <= 0 ? 0 : Math.max(0, Math.min(h, navOff + dy));
     navApply(false);
