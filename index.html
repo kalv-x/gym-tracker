@@ -918,7 +918,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-17.2"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-18.1"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -1205,6 +1205,7 @@
       DAYS.map((d) => `<button class="chip${s.day === d && !s.missed ? " on" : ""}" data-act="day" data-day="${d}">${d}</button>`).join("") + `</div>`;
     const named = s.exercises.filter((x) => x.name.trim()), ndone = named.filter((x) => x.done).length;
     const goal = usualGoal(w, s), hit = ndone >= goal && ndone > 0;
+    const waveFrac = Math.min(1, ndone / goal);
     if (named.length) h += `<div class="progress${hit ? " full" : ""}"><div class="pt"><span>${hit ? `Usual ${goal} reached` : ndone ? `${ndone} of your usual ${goal}` : `Your usual is ${goal} of ${named.length}`}</span>${bonusPill(ndone - goal)}</div>${waveSVG(Math.min(1, ndone / goal), hit)}</div>`;
     const best = bestBefore(w, s.gym);
     h += `<div class="exlist">`;
@@ -1225,6 +1226,7 @@
     h += `<div class="btnrow"><button class="addbtn" data-act="pick">+ Add exercise</button><button class="secondary" data-act="edit">Edit</button></div>`;
     if (!s.missed) h += `<button class="linkbtn" data-act="miss">Mark this session as missed</button>`;
     $("main").innerHTML = h;
+    if (named.length) animateWave(`${w.id}:${si}`, waveFrac, hit);
   }
 
   // Heaviest weight per exercise from completed sessions in earlier weeks
@@ -1298,14 +1300,46 @@
   }
 
   // Material 3 Expressive wavy progress indicator
+  const WAVE_W = 300, WAVE_MID = 7, WAVE_WL = 24, WAVE_AMP = 3.2;
+  function waveGeom(frac, amp) {
+    const end = Math.max(0, Math.min(1, frac)) * WAVE_W;
+    let d = `M0 ${WAVE_MID}`, up = true;
+    for (let x = 0; x < end + WAVE_WL; x += WAVE_WL / 2) { d += ` Q${x + WAVE_WL / 4} ${up ? WAVE_MID - amp * 2 : WAVE_MID + amp * 2} ${x + WAVE_WL / 2} ${WAVE_MID}`; up = !up; }
+    return { d, end, ts: end > 0 ? end + 10 : 0 };
+  }
   function waveSVG(frac, full) {
-    const W = 300, mid = 7, wl = 24, amp = full ? 0 : 3.2, end = Math.round(Math.max(0, Math.min(1, frac)) * W);
-    let d = `M0 ${mid}`, up = true;
-    for (let x = 0; x < end + wl; x += wl / 2) { d += ` Q${x + wl / 4} ${up ? mid - amp * 2 : mid + amp * 2} ${x + wl / 2} ${mid}`; up = !up; }
-    const ts = end > 0 ? end + 10 : 0;
-    return `<svg class="wave" viewBox="0 0 ${W} 14" preserveAspectRatio="none" aria-hidden="true"><defs><clipPath id="wclip"><rect x="-4" y="-6" width="${end + 4}" height="26"/></clipPath></defs>` +
-      (ts < W - 4 ? `<line class="track" x1="${ts}" y1="${mid}" x2="${W - 2}" y2="${mid}" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` : "") +
-      (end > 0 ? `<g clip-path="url(#wclip)"><path class="act${full ? "" : " wv"}" d="${d}" fill="none" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>` : "") + `</svg>`;
+    const g = waveGeom(frac, full ? 0 : WAVE_AMP), hideTrack = g.ts >= WAVE_W - 4;
+    return `<svg class="wave" viewBox="0 0 ${WAVE_W} 14" preserveAspectRatio="none" aria-hidden="true"><defs><clipPath id="wclip"><rect x="-4" y="-6" width="${g.end + 4}" height="26"/></clipPath></defs>` +
+      `<line class="track" x1="${g.ts}" y1="${WAVE_MID}" x2="${WAVE_W - 2}" y2="${WAVE_MID}" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"${hideTrack ? ' visibility="hidden"' : ""}/>` +
+      `<g clip-path="url(#wclip)"><path class="act${full ? "" : " wv"}" d="${g.d}" fill="none" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"${g.end > 0 ? "" : ' visibility="hidden"'}/></g></svg>`;
+  }
+  // Grow/shrink the bar from where it was to where it is now, with a little springy overshoot.
+  let waveWas = null, waveRaf = 0;
+  function animateWave(key, frac, full) {
+    const svg = $("main").querySelector(".progress .wave");
+    const from = waveWas && waveWas.key === key ? waveWas : null;
+    const shown = from && waveRaf ? from.now : from ? from.frac : frac;
+    cancelAnimationFrame(waveRaf); waveRaf = 0;
+    waveWas = { key, frac, amp: full ? 0 : WAVE_AMP, now: frac, nowAmp: full ? 0 : WAVE_AMP };
+    if (!svg || !from || Math.abs(shown - frac) < 1e-4 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const rect = svg.querySelector("clipPath rect"), line = svg.querySelector(".track"), path = svg.querySelector(".act");
+    const a0 = from.nowAmp ?? from.amp, a1 = full ? 0 : WAVE_AMP, t0 = performance.now(), dur = 620;
+    const spring = (t) => 1 - Math.exp(-6.5 * t) * Math.cos(9 * t); // settles with a small overshoot
+    const draw = (f, amp) => {
+      const g = waveGeom(f, amp);
+      rect.setAttribute("width", g.end + 4);
+      path.setAttribute("d", g.d); path.setAttribute("visibility", g.end > 0.5 ? "visible" : "hidden");
+      line.setAttribute("x1", g.ts); line.setAttribute("visibility", g.ts >= WAVE_W - 4 ? "hidden" : "visible");
+    };
+    draw(shown, a0);
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / dur), k = t < 1 ? spring(t) : 1;
+      const f = shown + (frac - shown) * k, amp = a0 + (a1 - a0) * Math.min(1, t * 1.6);
+      waveWas.now = f; waveWas.nowAmp = amp;
+      draw(f, amp);
+      waveRaf = t < 1 ? requestAnimationFrame(step) : 0;
+    };
+    waveRaf = requestAnimationFrame(step);
   }
 
   function halfText(v, f, other) {
