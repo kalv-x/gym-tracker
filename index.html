@@ -272,7 +272,7 @@
   .bonus { display: inline-flex; align-items: center; vertical-align: 2px; margin-left: 8px; padding: 1px 9px; border-radius: 10px; background: var(--tertiary); color: var(--on-tertiary); font-size: 13px; font-weight: 600; line-height: 20px; animation: pop .45s var(--spring) both; }
   @keyframes pop { from { transform: scale(.4); opacity: 0; } }
   .progress .pt .bonus { vertical-align: 0; }
-  .exsep { height: 14px; }
+  .exsep { font-size: 13px; font-weight: 500; color: var(--on-surface-variant); margin: 18px 6px 6px; }
   .exlist.sorting .exsep { opacity: 0; }
   .exr.done { background: var(--success-container); color: var(--on-success-container); }
   .exr-top { display: flex; align-items: center; gap: 2px; }
@@ -916,7 +916,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-18.3"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-18.4"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -1211,7 +1211,7 @@
     const split = finished && firstRest > 0;
     disp.forEach((ei, n) => {
       const e = s.exercises[ei];
-      if (split && n === firstRest) h += `<div class="exsep" aria-hidden="true"></div>`;
+      if (split && n === firstRest) h += `<div class="exsep">Other exercises</div>`;
       const g = split ? (n === firstRest - 1 ? " gend" : n === firstRest ? " gstart" : "") + (n >= firstRest ? " rest" : "") : "";
       h += `<div class="exr${e.done ? " done" : ""}${g}" data-ei="${ei}">
         <div class="exr-top"><span class="grip" aria-label="Drag to reorder"><svg viewBox="0 0 12 18" fill="currentColor"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg></span><button class="exr-name" data-act="exmenu"><span class="nm">${esc(e.name || "Untitled")}</span><span class="dots">⋯</span></button>
