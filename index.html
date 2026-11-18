@@ -918,7 +918,7 @@
 
   // ---------- backup ----------
   const APP_VERSION = "3";
-  const BUILD = "2026-11-18.1"; // bump on every push so open apps can tell a new version exists
+  const BUILD = "2026-11-18.2"; // bump on every push so open apps can tell a new version exists
   const EXP_KEY = "gymtracker.lastExport";
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function exportBackup() {
@@ -1323,8 +1323,9 @@
     waveWas = { key, frac, amp: full ? 0 : WAVE_AMP, now: frac, nowAmp: full ? 0 : WAVE_AMP };
     if (!svg || !from || Math.abs(shown - frac) < 1e-4 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const rect = svg.querySelector("clipPath rect"), line = svg.querySelector(".track"), path = svg.querySelector(".act");
-    const a0 = from.nowAmp ?? from.amp, a1 = full ? 0 : WAVE_AMP, t0 = performance.now(), dur = 620;
-    const spring = (t) => 1 - Math.exp(-6.5 * t) * Math.cos(9 * t); // settles with a small overshoot
+    const grow = frac > shown, a0 = from.nowAmp ?? from.amp, a1 = full ? 0 : WAVE_AMP, t0 = performance.now(), dur = grow ? 620 : 420;
+    // growing settles with a small springy overshoot; shrinking just eases out, no bounce
+    const spring = grow ? (t) => 1 - Math.exp(-6.5 * t) * Math.cos(9 * t) : (t) => 1 - Math.pow(1 - t, 3);
     const draw = (f, amp) => {
       const g = waveGeom(f, amp);
       rect.setAttribute("width", g.end + 4);
